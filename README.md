@@ -1,4 +1,3 @@
 # positive-js.github.io
-Website for blog
-
+[![Build Status](https://travis-ci.org/positive-js/blog.svg?branch=master)](https://travis-ci.org/positive-js/blog)
 
