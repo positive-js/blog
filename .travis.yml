@@ -1,0 +1,23 @@
+language: ruby
+rvm:
+  - 2.2
+
+before_script:
+  - chmod a+x ./scripts/build.sh
+  - chmod a+x ./scripts/deploy.sh
+
+script: 
+  - ./scripts/build.sh
+  
+deploy:
+  provider: script
+  script: ./scripts/deploy.sh
+  skip_cleanup: true
+  on:
+    branch: master
+
+env:
+  global:
+  - NOKOGIRI_USE_SYSTEM_LIBRARIES=true
+  - GITHUB_REPO: github.com/positive-js/positive-js.github.io.git
+  - REPO_TARGET_BRANCH: gh-pages
