@@ -1,0 +1,44 @@
+.post-footer {
+  
+  border-top: 1px solid $base-05;
+  border-bottom: 1px solid $base-05;
+  height: 40px;
+  display: table;
+  width: 100%;
+  position: relative;
+
+  @include MQ(M) {    
+    height: 80px;
+  }
+
+  .column-1, .column-2, .column-3, .column-full {    
+    padding-top: 10px;
+    @include MQ(M) {
+      padding-top: 30px;
+    }
+    span { color: $base-04; }
+    a,span {
+      @include font-size(12px);
+      @include MQ(M) {
+        @include font-size(16px);        
+      }
+    }
+  }
+
+  .column-1 {
+    text-align: left;
+    @include column(.3333);
+  }
+  .column-2 {
+    text-align: center;
+    @include column(.3333);
+  }
+  .column-3 {
+    text-align: right;
+    @include column(.3333);
+  }
+  .column-full {
+    text-align: center;
+    width: 100%;
+  }
+}

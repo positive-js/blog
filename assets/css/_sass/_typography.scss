@@ -1,0 +1,85 @@
+h1, h2, h3, h4, h5, h6 { 
+  line-height: 1.6;
+}
+
+h1 {
+  // mobile first
+  @include font-size(20px);
+  @include MQ(M) {
+    @include font-size(36px);
+  }
+}
+
+h2 {
+  // mobile first
+  @include font-size(18px);
+  @include MQ(M) {
+    @include font-size(31px);
+  }
+}
+
+h3 {
+  @include font-size(15px);
+  @include MQ(M) {
+    @include font-size(30px);
+  }
+}
+
+h4 {
+  @include font-size(16px);
+  @include MQ(M) {
+    @include font-size(24px);
+  }
+}
+
+h5 {
+  @include font-size(14px);
+  @include MQ(M) {
+    @include font-size(22px);
+  }
+}
+
+h6 {
+  @include font-size(14px);
+  @include MQ(M) {
+    @include font-size(19px);
+  }
+}
+
+p {
+  line-height: 1.6;
+  @include font-size(14px);
+  @include MQ(M) {
+    @include font-size(18px);
+  }
+}
+
+a {
+  background: transparent;
+}
+
+a:active, a:hover, a:focus {
+  outline: 0;
+}
+
+img {
+  border: 0;
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+
+hr {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border: 0;
+  border-top: 1px solid #eee;
+  height: 0;
+}
+
+/* bold text */
+strong, b { font-weight: 600; }
+
+/* italic */
+em, i { font-style: italic; }
