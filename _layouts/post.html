@@ -3,65 +3,65 @@ layout: default
 ---
 
 <div class="page-content wc-container">
-	<div class="post">
-		<h1>{{ page.title }}</h1>
-		<p class="post-meta">
-			{% if page.categories.size > 0 %}
-				<span class="categories">
-				{% if site.lang == "en" %}
-					{{ page.categories | array_to_sentence_string: 'and' }}
-				{% elsif site.lang == "ru" %}
-					{{ page.categories | array_to_sentence_string: 'и' }}
-				{% endif %}
-				</span> |
-	    	        {% endif %}
-			<span class="post-date">
-				{% if site.lang == "en" %}
-  					{{ page.date | date: "%b %-d, %Y" }} 
-				{% elsif site.lang == "ru" %}
-					{{ page.date | date: "%d.%m.%Y" }} 
-				{% endif %}
-			</span>
-		</p>		
-		<div class="post">
-			{{ content }}
-		</div>
-	</div>
+    <div class="post">
+        <h1>{{ page.title }}</h1>
+        <p class="post-meta">
+            {% if page.categories.size > 0 %}
+                <span class="categories">
+                {% if site.lang == "en" %}
+                    {{ page.categories | array_to_sentence_string: 'and' }}
+                {% elsif site.lang == "ru" %}
+                    {{ page.categories | array_to_sentence_string: 'и' }}
+                {% endif %}
+                </span> |
+            {% endif %}
+            <span class="post-date">
+                {% if site.lang == "en" %}
+                    {{ page.date | date: "%b %-d, %Y" }} 
+                {% elsif site.lang == "ru" %}
+                    {{ page.date | date: "%d.%m.%Y" }} 
+                {% endif %}
+            </span>
+        </p>
+        <div class="post">
+            {{ content }}
+        </div>
+    </div>
 
-	{% if site.related_posts %}
-	<div class="related">
-		<h4>{% translate global.related_posts %}</h4>
-		<ul class="posts">
-		    {% for post in site.related_posts limit:3 %}
-		    <li>
-			  <span>
-				  {% if site.lang == "en" %}
-  					{{ post.date | date: "%b %-d, %Y" }} 
-				{% elsif site.lang == "ru" %}
-					{{ post.date | date: "%d.%m.%Y" }} 
-				{% endif %} &raquo;</span>
-			  <a href="{{ post.url | prepend: site.baseurl | prepend: site.url }}">{{ post.title }}</a>
-		    </li>
-		    {% endfor %}
-		</ul>
-	</div>
-	{% endif %}
+    {% if site.related_posts %}
+    <div class="related">
+        <h4>{% translate global.related_posts %}</h4>
+        <ul class="posts">
+            {% for post in site.related_posts limit:3 %}
+            <li>
+                <span>
+                {% if site.lang == "en" %}
+                    {{ post.date | date: "%b %-d, %Y" }} 
+                {% elsif site.lang == "ru" %}
+                    {{ post.date | date: "%d.%m.%Y" }} 
+                {% endif %} &raquo;</span>
+                <a href="{{ post.url | prepend: site.baseurl | prepend: site.url }}">{{ post.title }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
-	<div class="post-footer">
-		<div class="column-1">
-			{% if page.previous %}
-				<a href="{{page.previous.url | prepend: site.baseurl | prepend: site.url }}"><< {% translate global.older_post %}</a>
-			{% else %}
-				<span><< {% translate global.older_post %}</span>
-			{% endif %}
-		</div>
-		<div class="column-2"><a href="{{ '/' | prepend: site.baseurl | prepend: site.url }} ">{% translate global.home %}</a></div>
-		<div class="column-3">
-			{% if page.next %}
-				<a href="{{ page.next.url | prepend: site.baseurl | prepend: site.url }}">{% translate global.newer_post %} >></a>
-			{% else %}
-				<span>{% translate global.newer_post %} >></span>
-			{% endif %}
-		</div>
-	</div>
+    <div class="post-footer">
+        <div class="column-1">
+            {% if page.previous %}
+                <a href="{{page.previous.url | prepend: site.baseurl | prepend: site.url }}"><< {% translate global.older_post %}</a>
+            {% else %}
+                <span><< {% translate global.older_post %}</span>
+            {% endif %}
+        </div>
+        <div class="column-2"><a href="{{ '/' | prepend: site.baseurl | prepend: site.url }} ">{% translate global.home %}</a></div>
+        <div class="column-3">
+            {% if page.next %}
+                <a href="{{ page.next.url | prepend: site.baseurl | prepend: site.url }}">{% translate global.newer_post %} >></a>
+            {% else %}
+                <span>{% translate global.newer_post %} >></span>
+            {% endif %}
+        </div>
+    </div>
 </div>
