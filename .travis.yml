@@ -19,5 +19,5 @@ deploy:
 env:
   global:
   - NOKOGIRI_USE_SYSTEM_LIBRARIES=true
-  - GITHUB_REPO: github.com/positive-js/positive-js.github.io.git
+  - GITHUB_REPO: github.com/positive-js/blog.git
   - REPO_TARGET_BRANCH: gh-pages
