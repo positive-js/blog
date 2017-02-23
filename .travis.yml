@@ -1,23 +1,20 @@
 language: ruby
 rvm:
-  - 2.2
-
+- 2.2
 before_script:
-  - chmod a+x ./scripts/build.sh
-  - chmod a+x ./scripts/deploy.sh
-
-script: 
-  - ./scripts/build.sh
-  
+- chmod a+x ./scripts/build.sh
+- chmod a+x ./scripts/deploy.sh
+script:
+- "./scripts/build.sh"
 deploy:
   provider: script
-  script: ./scripts/deploy.sh
+  script: "./scripts/deploy.sh"
   skip_cleanup: true
   on:
     branch: master
-
 env:
   global:
   - NOKOGIRI_USE_SYSTEM_LIBRARIES=true
   - GITHUB_REPO: github.com/positive-js/blog.git
   - REPO_TARGET_BRANCH: gh-pages
+  - secure: j0+a2SnXywaUawYUx2lgxAtRobQ2pcjvloOT0YqP6b/QKsthV2sbgiqzyJ4Uah6TO3Pf35Gh+7p3Hr74m0LuHa0yMcxgomm7hwtGF+sIqDWReWPGb08matV8MvDNHAIc1S4eXcxcCHXUjioEpAear0TeAfEXPbsuVXmiRmddW12C7Lng3ido1wPASSupjnnauUJEfy7wr0DgmWp7F6VqHx4HTgdhzBm3EdVLPaesx2SOKsQHN3j2o6A5vWTvtOC7m+bou5xb/riiy543CzUFVHPVchN5xqFf3yvS4tL2Zl0KKGrViptDN9kBbFAHSuWrPdR0SA5T+bKJHuoa65ebCa21fWYzZT0jvBSIeM7csGoNd5cKuSpTaG1nlLFCUjlpNoF6Xmb6GYp4KWOi952UuooeuXLMoHh2ze3LSwWPemI4J5KxW7+eNz5x+6VKdt3cmPKokmnPjeFg+vhOuufzQfpDeYD/jkC9p0MMmT3Pi147m1L+pjaHZ+xcAn6rwlmrzMIiUJAaVBtzSVvZdgLeO9FHU9xnwSA8W1yhxYwy/p3BfHTVJo8u9nX6s/2+d0iL1bXktvi3yTwhCIRlGlLivlRYWqobxknCA71NkI7trtfmF26GPoOBv6QGPt7obK/cT2ykTHhnExHVOtuP9KLqqOOYrxmRHe3FsL4cl7ZdBso=
