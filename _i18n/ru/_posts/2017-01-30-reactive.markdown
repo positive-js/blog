@@ -5,7 +5,6 @@ date:   2017-01-30
 description: Введение в реактивное программирование
 categories:
 - rxjs
-- tutorial
 - 10 мин чтения
 permalink: rxjs/reactive
 ---
