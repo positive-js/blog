@@ -64,7 +64,7 @@ body {
 
 .wc-container {
     width: 90%;
-    max-width: $M; // see breakpoints in _sass/partials/_layout.scss
+    max-width: $L; // see breakpoints in _sass/partials/_layout.scss
     margin: 0 auto;
 
     &::after { /* Clearfix */
