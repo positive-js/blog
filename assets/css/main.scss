@@ -228,6 +228,17 @@ footer.main-footer {
       background-color: $base-08;
     }
   }
+
+  li a.telegram {
+    background: $base-07;
+    background-image: url("./images/telegram-icon.svg");
+    background-repeat: no-repeat;
+    background-position: 4px;
+
+    &:hover {
+        background-color: $base-08;
+    }
+  }
     
   li a.twitter {
     background-position: 0 0;

@@ -33,6 +33,7 @@ positive:
     social:
       twitter: ptsecurity
       github: positive-js
+      telegram: positivejs
 
 gems: 
   - jekyll-paginate
