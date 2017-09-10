@@ -1,0 +1,686 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="ru"><generator uri="http://jekyllrb.com" version="3.4.0">Jekyll</generator><link href="/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="/blog/" rel="alternate" type="text/html" hreflang="ru" /><updated>2017-09-10T10:24:14+00:00</updated><id>/blog/</id><title type="html">Your awesome title</title><subtitle>Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.
+</subtitle><entry><title type="html">Deep dive CSS: font metrics, line-height and vertical-align</title><link href="/blog/css-font-metrics-line-height-and-vertical-align" rel="alternate" type="text/html" title="Deep dive CSS: font metrics, line-height and vertical-align" /><published>2017-09-03T00:00:00+00:00</published><updated>2017-09-03T00:00:00+00:00</updated><id>/blog/fonts-linehight</id><content type="html" xml:base="/blog/css-font-metrics-line-height-and-vertical-align">&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; — это простые свойства CSS. Настолько простые, что большинство из нас уверены, что понимают, как они работают и как их использовать. К сожалению, это не так — на самом деле они, пожалуй, являются самыми сложными свойствами, поскольку играют важную роль в создании малоизвестной особенности CSS под названием &lt;strong&gt;«строчный контекст форматирования»&lt;/strong&gt; (inline formatting context).&lt;/p&gt;
+
+&lt;p&gt;Например, &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; можно задать в виде длины или безразмерного значения, но его значение по умолчанию — &lt;code class=&quot;highlighter-rouge&quot;&gt;normal&lt;/code&gt; (стандартное). Хорошо, но что значит «стандартное»? Зачастую пишут, что это (как правило) 1, или, может быть, 1,2. Даже в &lt;a href=&quot;https://www.w3.org/TR/CSS2/visudet.html#propdef-line-height&quot;&gt;спецификации CSS нет четкого ответа на данный вопрос&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Нам известно, что безразмерное значение &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; зависит от значения &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt;, но проблема в том, что &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size: 100px&lt;/code&gt; выглядит по-разному для разных гарнитур. В связи с этим возникает вопрос: всегда ли &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; будет одинаковым или может различаться? Действительно ли это значение находится в промежутке от 1 до 1,2? А как &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; влияет на &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;?&lt;/p&gt;
+
+&lt;p&gt;Давайте углубимся в не самый простой механизм CSS…&lt;/p&gt;
+
+&lt;h2 id=&quot;Начнем-с-разговора-о-font-size&quot;&gt;Начнем с разговора о &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt;&lt;/h2&gt;
+
+&lt;p&gt;Рассмотрим этот простой HTML-код с тегом &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;p&amp;gt;&lt;/code&gt;, содержащим три элемента &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;span&amp;gt;&lt;/code&gt;, каждый из которых со своим font-family:&lt;/p&gt;
+
+&lt;div class=&quot;language-html highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;p&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;a&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;b&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;c&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/p&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt;  &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nl&quot;&gt;font-size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100px&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;nc&quot;&gt;.a&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nl&quot;&gt;font-family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Helvetica&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;nc&quot;&gt;.b&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nl&quot;&gt;font-family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Gruppo&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;nc&quot;&gt;.c&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nl&quot;&gt;font-family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Catamaran&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;При использовании одного и того же &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt; в разных гарнитурах высота получается различной:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/font-size.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Даже если нам известно об этой особенности, почему &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size: 100px&lt;/code&gt; не создает элементы высотой 100px? Я измерил эти значения: Helvetica — 115px, Gruppo — 97px и Catamaran — 164px.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/font-size-line-height.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Хотя на первый взгляд это выглядит несколько странно, все вполне ожидаемо — &lt;strong&gt;причина в самом шрифте&lt;/strong&gt;.Как это работает:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Шрифт задает свой &lt;a href=&quot;http://designwithfontforge.com/en-US/The_EM_Square.html&quot;&gt;em-квадрат&lt;/a&gt; (em-square) (он же UPM, units per em — единиц на кегельную площадку) — своего рода площадку, в рамках которой будет рисоваться каждый символ. В этом квадрате для измерения используются относительные единицы, и, как правило, для него принимаются размеры 1000 единиц. Хотя также бывает 1024, 2048 или иное количество единиц.&lt;/li&gt;
+  &lt;li&gt;В зависимости от количества относительных единиц задаются метрики шрифтов, такие как высота верхних и нижних выносных элементов (ascender/descender), прописных и строчных букв. Некоторые значения могут выходить за рамки em-квадрата.&lt;/li&gt;
+  &lt;li&gt;В браузере относительные единицы масштабируются до необходимого &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Возьмем шрифт Catamaran и откроем его в &lt;a href=&quot;https://fontforge.github.io/en-US/&quot;&gt;FontForge&lt;/a&gt; для получения метрик:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;em-квадрат принят за 1000 единиц;&lt;/li&gt;
+  &lt;li&gt;высота верхних выносных элементов составляет 1100 единиц, а нижних — 540.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;После нескольких проверок выяснилось, что браузеры на Mac OS используют значения HHead Ascent/Descent, а на Windows — Win Ascent/Descent (эти значения могут различаться). Помимо этого, высота прописных букв Capital Height составляет 680 единиц, а строчных X height — 485.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/font-forge-metrics.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Таким образом, шрифт Catamaran использует 1100 + 540 единиц в em-квадрате, состоящем из 1000 единиц, и поэтому при размере font-size: 100px получается высота 164px. Данная вычисленная высота определяет &lt;strong&gt;область содержимого (content-area) элемента&lt;/strong&gt; (этот термин будет использоваться далее по тексту). Можете считать область содержимого областью, к которой применяется свойство &lt;code class=&quot;highlighter-rouge&quot;&gt;background&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Можно также предположить, что высота прописных букв составляет 68px (680 единиц), а строчных (x-высота) — 49px (485 единиц). В результате 1ex = 49px и 1em = 100px, а не 164px (к счастью, em зависит от &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt;, а не от вычисленной высоты).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/upm-px-equivalent.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Прежде чем нырнуть глубже, рассмотрим основные моменты, с которыми придется столкнуться. Элемент &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;p&amp;gt;&lt;/code&gt; при отображении на экране может состоять из нескольких строк с соответствующей шириной. Каждая строка состоит из одного или нескольких строчных элементов (inline elements)(HTML-тегов или анонимных строчных элементов для текстового содержимого) и называется контейнером строки (line-box). &lt;strong&gt;Высота контейнера строки зависит от высот его дочерних элементов&lt;/strong&gt;. То есть браузер вычисляет высоту каждого строчного элемента, а по ней — высоту контейнера строки (от самой верхней до самой нижней точки ее дочерних элементов). В результате высоты контейнера строки всегда достаточно, чтобы вместить все его дочерние элементы (по умолчанию).&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Каждый HTML-элемент на самом деле представляет собой стопку контейнеров строки. Если вам известна высота всех контейнеров строки, то известна и высота элемента.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;При изменении приведенного выше HTML-кода следующим образом:&lt;/p&gt;
+&lt;div class=&quot;language-html highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;p&amp;gt;&lt;/span&gt;
+    Good design will be better.
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;a&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;b&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;class=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;c&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+    We get to make a consequence.
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/p&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;будет сгенерировано три контейнера строки:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;в первом и последнем будет по одному анонимному строчному элементу (текстовое содержимое);&lt;/li&gt;
+  &lt;li&gt;во втором будет два анонимных строчных элемента и 3 элемента &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;span&amp;gt;&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/line-boxes.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Отчетливо видно, что второй контейнер строки больше остальных по высоте из-за вычисленной области содержимого его дочерних элементов, точнее того, который использует шрифт Catamaran.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Сложным моментом в создании контейнера строки является то, что мы, по сути, не можем ни увидеть, ни управлять им через CSS.&lt;/strong&gt; Даже применение фона к &lt;code class=&quot;highlighter-rouge&quot;&gt;::first-line&lt;/code&gt; не помогает отобразить высоту первого контейнера строки.&lt;/p&gt;
+
+&lt;h2 id=&quot;line-height-о-проблемах-и-прочих-вопросах&quot;&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;: о проблемах и прочих вопросах&lt;/h2&gt;
+
+&lt;p&gt;До этого момента я ввел два понятия — область содержимого и контейнер строки. Если вы внимательно читали, то заметили, что высота контейнера строки вычисляется на основании высоты его дочерних элементов, но не говорил, что на основании высоты области содержимого его дочерних элементов. А это большая разница.&lt;/p&gt;
+
+&lt;p&gt;Даже если это может показаться странным, &lt;strong&gt;у строчного элемента есть две различных высоты: высота области содержимого и высота виртуальной области (virtual-area)&lt;/strong&gt; (я сам придумал термин «виртуальная область», поскольку эту высоту мы увидеть не можем; в спецификации этого термина вы не найдете).&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Высота области содержимого определяется метриками шрифта (как мы уже видели ранее).&lt;/li&gt;
+  &lt;li&gt;Высота виртуальной области (virtual-area) представляет собой &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;, и это — высота, которая &lt;strong&gt;используется для вычисления высоты контейнера строки&lt;/strong&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/line-height.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Кроме того, сказанное опровергает распространенное мнение о том, что &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; — это расстояние между базовыми линиями (baseline). В CSS это не так.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/line-height-yes-no.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;В других редакторских программах это может быть расстоянием между базовыми линиями. Например, в Word и Photoshop это так и есть. Основная разница в том, что в CSS это расстояние есть и для первой строки&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Вычисленная разница в высоте между виртуальной областью и областью содержимого называется интерлиньяж (leading). Одна половина интерлиньяжа добавляется сверху к области содержимого, а вторая — снизу. Поэтому область содержимого всегда находится по центру виртуальной области.&lt;/p&gt;
+
+&lt;p&gt;В зависимости от вычисленного значения &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; (виртуальная область) может быть равной, больше или меньше области содержимого. Если виртуальная область меньше, то значение интерлиньяжа отрицательное и контейнер строки визуально меньше своих дочерних элементов по высоте.&lt;/p&gt;
+
+&lt;p&gt;Есть и другие виды строчных элементов:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;замещаемые строчные элементы (&lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;img&amp;gt;&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;input&amp;gt;&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;svg&amp;gt;&lt;/code&gt; и т. д.);&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;inline-block&lt;/code&gt; и все элементы типа &lt;code class=&quot;highlighter-rouge&quot;&gt;inline-*&lt;/code&gt;;&lt;/li&gt;
+  &lt;li&gt;строчные элементы, которые задействованы в особом контексте форматирования (например, в элементе flexbox все flex-компоненты блокофицируются).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Для таких особых строчных элементов высота рассчитывается на основе их свойств &lt;code class=&quot;highlighter-rouge&quot;&gt;height&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;margin&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;border&lt;/code&gt;. Если для height указано значение auto, то применяется &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;, и высота области содержимого равна line-height.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/line-height-inline-block.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;И все же проблема остается прежней: каково значение normal для &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;? Ответ на этот вопрос, как и в случае вычисления области содержимого, нужно искать среди метрик шрифта.
+Итак, вернемся к FontForge. Размер em-квадрата для Catamaran равняется 1000, но мы наблюдаем много значений для верхних и нижних выносных элементов:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Общие значения Ascent/Descent: высота верхнего выносного элемента — 770, нижнего — 230. Используются для создания символов (таблица «OS/2»).&lt;/li&gt;
+  &lt;li&gt;Метрики Ascent/Descent: высота верхнего выносного элемента — 1100, нижнего — 540. Используются для определения высоты области содержимого (таблицы «hhea» и «OS/2»).&lt;/li&gt;
+  &lt;li&gt;Метрика Line Gap (междустрочный интервал). Используется для определения &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: normal&lt;/code&gt;, данное значение прибавляется к метрикам Ascent/Descent (таблица «hhea»).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;В нашем случае шрифт Catamaran определяет, что междустрочный интервал равен 0 единиц, и, таким образом, &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: normal&lt;/code&gt; будет равняться области содержимого, которая составляет 1640 единиц или 1,64.&lt;/p&gt;
+
+&lt;p&gt;В качестве сравнения: для шрифта Arial em-квадрат равен 2048 единиц, высота верхнего выносного элемента — 1854, нижнего — 434, междустрочный интервал — 67. Таким образом, при &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size: 100px&lt;/code&gt; область содержимого составит 112px (1117 единиц), а значение &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: normal&lt;/code&gt; — 115px (1150 единиц или 1,15). Все эти метрики индивидуальны для каждого шрифта и задаются дизайнером шрифта.&lt;/p&gt;
+
+&lt;p&gt;Следовательно, задавать &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: 1&lt;/code&gt; неэффективно. Напомню вам, что безразмерные значения зависят от &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt;, а не от области содержимого, а то, что размер области содержимого превышает размер виртуальной области, является причиной множества наших проблем.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/line-height-1.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Но причина не только в &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: 1&lt;/code&gt;. Если уж на то пошло, из 1117 шрифтов, установленных на моем компьютере (да, я установил все шрифты из Google Web Fonts), у 1059 шрифтов, то есть в 95%, вычисленный показатель &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; больше 1. Вообще, их вычисленный показатель &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; варьируется от 0,618 до 3,378. (Вам не показалось — 3,378!)&lt;/p&gt;
+
+&lt;p&gt;Небольшие подробности по поводу расчета &lt;code class=&quot;highlighter-rouge&quot;&gt;line-box&lt;/code&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Для строчных элементов — padding и border увеличивают область фона, но не высоту области содержимого (и не высоту контейнера строки). Поэтому область содержимого — это не всегда то, что видно на экране. От &lt;code class=&quot;highlighter-rouge&quot;&gt;margin-top&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;margin-bottom&lt;/code&gt; нет никакого эффекта.&lt;/li&gt;
+  &lt;li&gt;Для замещаемых строчных элементов, элементов типа &lt;code class=&quot;highlighter-rouge&quot;&gt;inline-block&lt;/code&gt; и блокофицированных строчных элементов — &lt;code class=&quot;highlighter-rouge&quot;&gt;padding&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;margin&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;border&lt;/code&gt; увеличивают &lt;code class=&quot;highlighter-rouge&quot;&gt;height&lt;/code&gt; и, следовательно, высоту области содержимого и контейнера строки.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;vertical-align-то-свойство-которое-управляет-всем&quot;&gt;vertical-align: то свойство, которое управляет всем&lt;/h2&gt;
+&lt;p&gt;Я еще не останавливался подробно на свойстве &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt;, хотя оно является основным фактором для вычисления высоты контейнера строки. Можно даже сказать, что &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; может играть ведущую роль в строчном контексте форматирования.&lt;/p&gt;
+
+&lt;p&gt;Его значение по умолчанию — &lt;code class=&quot;highlighter-rouge&quot;&gt;baseline&lt;/code&gt;. Помните такие метрики шрифта, как высота верхнего и нижнего выносных элементов (ascender/descender)? Эти значения определяют, где находится базовая линия и, следовательно, соотношение между верхней и нижней частями. Поскольку соотношение между верхним и нижним выносными элементами редко бывает 50/50, это может приводить к неожиданным результатам, например с элементами того же уровня.&lt;/p&gt;
+
+&lt;p&gt;Начнем с такого кода:&lt;/p&gt;
+
+&lt;div class=&quot;language-html highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;p&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/p&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;font-family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Catamaran&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;font-size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;line-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;200px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Тег &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;p&amp;gt;&lt;/code&gt; с двумя одноуровневыми элементами &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;span&amp;gt;&lt;/code&gt;, наследующими &lt;code class=&quot;highlighter-rouge&quot;&gt;font-family&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt; и фиксированную &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;. Базовые линии совпадают, и высота контейнера строки равна их &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/vertical-align-baseline.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Но что, если у второго элемента &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt; будет меньше?&lt;/p&gt;
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;span&lt;/span&gt;&lt;span class=&quot;nd&quot;&gt;:last-child&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;font-size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;50px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;Как бы странно это ни звучало, выравнивание базовой линии, выставленной по умолчанию, может привести к увеличению высоты (!) контейнера строки, как показано на рисунке ниже. Напоминаю, что высота контейнера строки рассчитывается от самой верхней до самой нижней точки его дочерних элементов.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/vertical-align-baseline-nok.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Это могло бы стать доводом в пользу безразмерных значений &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;, но иногда требуются фиксированные значения для создания идеального вертикального ритма. Честно говоря, независимо от того, что вы выберете, у вас всегда будут проблемы с выравниванием строки.&lt;/p&gt;
+
+&lt;p&gt;Рассмотрим еще один пример. Тег &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;p&amp;gt;&lt;/code&gt; с &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: 200px&lt;/code&gt;, который содержит один единственный &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;span&amp;gt;&lt;/code&gt;, наследующий его &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-html highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;p&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;span&amp;gt;&lt;/span&gt;Ba&lt;span class=&quot;nt&quot;&gt;&amp;lt;/span&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/p&amp;gt;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;line-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;200px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;span&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;font-family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Catamaran&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;font-size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Какова высота контейнера строки? Мы могли бы предположить, что 200px, но это не так. Проблема в том, что у &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;p&amp;gt;&lt;/code&gt; есть свое собственное, отличающееся значение &lt;code class=&quot;highlighter-rouge&quot;&gt;font-family&lt;/code&gt; (по умолчанию это serif). Базовые линии тега &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;p&amp;gt;&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;span&amp;gt;&lt;/code&gt;, по всей вероятности, находятся на разной высоте, и поэтому высота контейнера строки больше, чем предполагалось. Это вызвано тем, что браузеры производят вычисление, считая, что каждый контейнер строки начинается с символа нулевой ширины, который в спецификации называется «strut».&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Невидимый символ с видимым эффектом.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Итак, у нас все та же проблема, что и в случае с одноуровневыми элементами.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/vertical-align-strut.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;С выравниванием по базовой линии все плохо, но, может, нас спасет &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align: middle&lt;/code&gt;? Как сказано в спецификации, &lt;code class=&quot;highlighter-rouge&quot;&gt;middle&lt;/code&gt; «выравнивает контейнер по вертикальной средней точке (midpoint) с базовой линией родительского контейнера плюс половина x-высоты первичного элемента». Соотношение базовых линий, равно как и x-высот (x-height), может быть различным, поэтому на выравнивание по &lt;code class=&quot;highlighter-rouge&quot;&gt;middle&lt;/code&gt; тоже нельзя положиться. А хуже всего тот факт, что в большинстве сценариев &lt;code class=&quot;highlighter-rouge&quot;&gt;middle&lt;/code&gt; никогда не бывает по-настоящему «по центру». На это влияет слишком много факторов, которые нельзя задать через CSS (x-высота, соотношение верхнего и нижнего выносных элементов и др.).&lt;/p&gt;
+
+&lt;p&gt;Помимо этого, есть еще четыре значения, которые в некоторых случаях могут оказаться полезными:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align: top / bottom&lt;/code&gt; — выравнивание по верхней или нижней границе контейнера строки;&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align: text-top / text-bottom&lt;/code&gt; — выравнивание по верхней или нижней границе области содержимого.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/vertical-align-top-bottom-text.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Но будьте внимательны: во всех случаях выравнивается виртуальная область, то есть невидимая высота. Рассмотрим простой пример с использованием &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align: top&lt;/code&gt;. Невидимая &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; может давать странный, но ожидаемый результат.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/vertical-align-top-virtual-height.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;И наконец, &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; также принимает числовые значения, которые смещают контейнер выше или ниже относительно базовой линии. Этот последний вариант может пригодиться.&lt;/p&gt;
+
+&lt;h2 id=&quot;css-восхитителен&quot;&gt;CSS восхитителен&lt;/h2&gt;
+
+&lt;p&gt;Мы обсудили вопрос взаимодействия &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt;, но сейчас вопрос в том, можно ли управлять метриками шрифта через CSS? Если кратко, то нет. Хотя я бы этого очень хотел. В любом случае, думаю, настало время немного развлечься. Метрики шрифта являются постоянными величинами, поэтому хоть что-то у нас должно получиться.&lt;/p&gt;
+
+&lt;p&gt;Что, если, например, нам нужен текст шрифтом Catamaran с высотой прописных букв ровно 100px? Вроде выполнимо, так что давайте произведем некоторые расчеты.&lt;/p&gt;
+
+&lt;p&gt;Прежде всего укажем все метрики шрифта как пользовательские свойства CSS, а затем вычислим &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt;, при котором высота прописных букв будет равняться 100px.&lt;/p&gt;
+
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c&quot;&gt;/* метрики шрифта */&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--font&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;Catamaran&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--fm-capitalHeight&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0.68&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--fm-descender&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0.54&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--fm-ascender&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;1.1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--fm-linegap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;/* необходимый размер шрифта для высоты прописных букв */&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--capital-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;/* применить font-family */&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;font-family&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--font&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;/* рассчитать размер шрифта для получения высоты прописных букв, равной необходимому размеру шрифта */&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--computedFontSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--capital-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--fm-capitalHeight&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;font-size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--computedFontSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;1px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/css-metrics-capital-height.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Довольно просто, не так ли? Но как быть, если нам нужно, чтобы текст был визуально по центру, а оставшееся пространство равномерно распределялось сверху и снизу от буквы «B»? Для этого необходимо рассчитать &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; на основании соотношения между верхним и нижним выносными элементами.&lt;/p&gt;
+
+&lt;p&gt;Сначала вычислим &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: normal&lt;/code&gt; и высоту области содержимого:&lt;/p&gt;
+
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;err&quot;&gt;…&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--lineheightNormal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--fm-ascender&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--fm-descender&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--fm-linegap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--contentArea&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--lineheightNormal&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--computedFontSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Затем нам потребуются:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;расстояние от низа прописной буквы до нижнего края;&lt;/li&gt;
+  &lt;li&gt;расстояние от верха прописной буквы до верхнего края.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Примерно так:&lt;/p&gt;
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;err&quot;&gt;…&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--distanceBottom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--fm-descender&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--distanceTop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--fm-ascender&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--fm-capitalHeight&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Теперь можем вычислить &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; как разницу между этими расстояниями, умноженную на вычисленное значение &lt;code class=&quot;highlighter-rouge&quot;&gt;font-size&lt;/code&gt; (Это значение нужно применить к строчному дочернему элементу).&lt;/p&gt;
+
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;err&quot;&gt;…&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--valign&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--distanceBottom&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--distanceTop&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--computedFontSize&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;span&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;vertical-align&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--valign&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;-1px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;И наконец, задаем необходимое значение &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; и вычисляем его, сохраняя вертикальное выравнивание:&lt;/p&gt;
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;err&quot;&gt;…&lt;/span&gt;
+    &lt;span class=&quot;c&quot;&gt;/* необходимая высота строки */&lt;/span&gt;
+    &lt;span class=&quot;py&quot;&gt;--line-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;line-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--line-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--capital-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--valign&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;1px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/css-metrics-results-line-height.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Теперь довольно просто добавить графический элемент той же высоты, что и буква «B»:&lt;/p&gt;
+&lt;div class=&quot;language-css highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nt&quot;&gt;span&lt;/span&gt;&lt;span class=&quot;nd&quot;&gt;::before&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;content&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;''&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;display&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inline-block&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;width&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1px&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--capital-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;calc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;m&quot;&gt;1px&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;--capital-height&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;margin-right&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;10px&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;background&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;sx&quot;&gt;url('https://cdn.pbrd.co/images/yBAKn5bbv.png')&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;nl&quot;&gt;background-size&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cover&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/line-height/css-metrics-results-icon.png&quot; alt=&quot;image&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Напоминаю, что этот тест показан исключительно для демонстрации, и полагаться на его результаты не стоит. Причин тут много:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Если метрики шрифта непостоянны, то расчеты в браузере постоянными не будут. ¯(ツ)/¯&lt;/li&gt;
+  &lt;li&gt;Если шрифт не загрузился, то метрики резервного шрифта, по всей вероятности, будут другими, и работать со множеством значений быстро станет невозможно.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;Подведем-итоги&quot;&gt;Подведем итоги&lt;/h2&gt;
+
+&lt;p&gt;Рабочие примеры:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://jsbin.com/hogavos/edit?html,css,output&quot;&gt;JSBin&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://gist.github.com/Fost/9e9d575a9bd4bdc1aa610afefda62917&quot;&gt;gist&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Что мы выяснили:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Строчный (inline) контекст форматирования действительно сложен для понимания.&lt;/li&gt;
+  &lt;li&gt;У всех строчных элементов есть две высоты:
+    &lt;ul&gt;
+      &lt;li&gt;высота области содержимого (которая зависит от метрик шрифта);&lt;/li&gt;
+      &lt;li&gt;высота виртуальной области (&lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt;);&lt;/li&gt;
+      &lt;li&gt;ни одну из них совершенно точно нельзя визуализировать (разве что вы занимаетесь инструментальными средствами разработки и решили исправить этот недочет, — тогда было бы просто чудесно).&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: normal&lt;/code&gt; зависит от метрик шрифта.&lt;/li&gt;
+  &lt;li&gt;из-за line-height: n виртуальная область может стать меньше области содержимого.&lt;/li&gt;
+  &lt;li&gt;на &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; особо полагаться не стоит.&lt;/li&gt;
+  &lt;li&gt;высота контейнера строки вычисляется при помощи свойств &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;vertical-align&lt;/code&gt; его дочерних элементов.&lt;/li&gt;
+  &lt;li&gt;Мы не можем просто получить или задать метрики шрифта через CSS.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Но я все равно люблю CSS :)&lt;/p&gt;
+
+&lt;h2 id=&quot;Полезные-ссылки&quot;&gt;Полезные ссылки&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;метрики шрифта: &lt;a href=&quot;https://fontforge.github.io/en-US/&quot;&gt;FontForge&lt;/a&gt;, &lt;a href=&quot;http://opentype.js.org/font-inspector.html&quot;&gt;opentype.js&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://brunildo.org/test/aspect-lh-table2.html&quot;&gt;вычислить &lt;code class=&quot;highlighter-rouge&quot;&gt;line-height: normal&lt;/code&gt; и некоторые пропорции в браузере&lt;/a&gt;;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.w3.org/Style/CSS/Test/Fonts/Ahem/&quot;&gt;Ahem&lt;/a&gt; — специальный шрифт, чтобы понять, как это работает&lt;/li&gt;
+  &lt;li&gt;более глубокое формальное объяснение &lt;a href=&quot;http://meyerweb.com/eric/css/inline-format.html&quot;&gt;строчного контекста форматирования&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;будущая спецификация по данной теме для помощи с вертикальным выравниванием: &lt;a href=&quot;https://drafts.csswg.org/css-line-grid/&quot;&gt;Line Grid module&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;метрики шрифта, &lt;a href=&quot;https://drafts.css-houdini.org/font-metrics-api-1/&quot;&gt;API Уровень 1&lt;/a&gt;, сборник интересных идей (Гудини)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;Оригинал-статьи&quot;&gt;Оригинал статьи,&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://iamvdo.me/en/blog/css-font-metrics-line-height-and-vertical-align&quot;&gt;Vincent De Oliveira&lt;/a&gt;&lt;/p&gt;</content><author><name></name></author><summary type="html">line-height и vertical-align — это простые свойства CSS. Настолько простые, что большинство из нас уверены, что понимают, как они работают и как их использовать. К сожалению, это не так — на самом деле они, пожалуй, являются самыми сложными свойствами, поскольку играют важную роль в создании малоизвестной особенности CSS под названием «строчный контекст форматирования» (inline formatting context).</summary></entry><entry><title type="html">Как собрать иконочный шрифт из файла скетча</title><link href="/blog/iconfont" rel="alternate" type="text/html" title="Как собрать иконочный шрифт из файла скетча" /><published>2017-04-05T00:00:00+00:00</published><updated>2017-04-05T00:00:00+00:00</updated><id>/blog/iconfont</id><content type="html" xml:base="/blog/iconfont">&lt;p&gt;&lt;img src=&quot;https://habrastorage.org/files/7bb/f4f/812/7bbf4f8120f9441d844daf29fcc16582.png&quot; alt=&quot;image&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;У дизайнера есть несколько разных способов передать иконки разработчику:&lt;/p&gt;
+
+&lt;p&gt;— отдельными файлами PNG и спрайтом PNG,
+— отдельными файлами SVG и спрайтом SVG,
+— иконочным шрифтом.&lt;/p&gt;
+
+&lt;p&gt;Разработчики фронтенда все чаще привыкли использовать иконки в виде шрифта. Этим же способом распространяются популярные иконочные наборы (например, Font Awesome). У нас в компании разработчики тоже просят «дай шрифт». Мы некоторое время отлаживали схему сборки шрифта: как из файла Sketch автоматически получить файл, пригодный для фронтенда, не замучив дизайнера.&lt;/p&gt;
+
+&lt;p&gt;В этом посте я расскажу о нашей схеме, покажу скрипты сборки. Рассказ может быть полезен разработчикам фронтенда и дизайнерам интерфейсов. В меньшей степени он будет полезен бекендным разработчикам интерфейсов (классический Asp.Net MVC или что-то подобное): схема будет та же, но не будет готовых файлов конфигураций и скриптов.&lt;/p&gt;
+
+&lt;cut /&gt;
+
+&lt;h2 id=&quot;Зачем-это-делать-есть-же-фонтелло&quot;&gt;Зачем это делать, есть же фонтелло&lt;/h2&gt;
+
+&lt;p&gt;Есть много готовых сервисов, которые собирают шрифт по загруженным SVG-файлам, например fontello. Мы не стали использовать ни один из них, потому что с ними могут быть сложности:&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Дизайнер может случайно сломать шрифт&lt;/strong&gt;. Если забыть и не экспортировать иконку, которую уже давал, то следующая версия шрифта будет без него и в неизвестном месте сломается интерфейс. Ситуацию усугубляет факт, что дизайнеров у каждого продукта несколько, а общий набор иконок пополняют 5-6 человек.&lt;/p&gt;
+
+&lt;p&gt;Хорошее решение — простое, в нем минимум ручных действий.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Нескольким дизайнерам работать непросто&lt;/strong&gt;. Если несколько дизайнеров поддерживают один шрифт, то возникает много вопросов синхронизации: где хранить исходники, файлы SVG и файлы шрифта, кто собирает и кому передает, как не забыть иконку.&lt;/p&gt;
+
+&lt;p&gt;Хорошее решение позволяет добавлять иконки скольким угодно дизайнерам так, что они не испортят чужую работу.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Cложно интегрировать в общий процесс сборки продукта&lt;/strong&gt;. Отдельно стоящий сервис тяжело встроить в общий процесс разработки и сборки, а у кого-то есть еще и процесс CI. Придется вручную собирать сервисом файл, куда-то его загружать и как-то версионировать.&lt;/p&gt;
+
+&lt;p&gt;Хорошее решение встраивается в процесс разработки.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Не всех устраивает внешний сервис&lt;/strong&gt;. Многие компании не верят во внешние сервисы: они могут изменить набор функций, упасть во время подготовки релиза, стать платными или закрыться. В конце концов, их могут хакнуть. Мы — ИБ-компания, и каждый раз раздражать профессионально деформированных безопасников и разработчиков наличием внешнего сервиса не хочется.&lt;/p&gt;
+
+&lt;p&gt;Хорошее решение работает внутри компании.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Формируется не все, что надо&lt;/strong&gt;. Некоторые сервисы выдают шрифт, а иконки кодируют номерами символов. К сожалению, на эти номера полагаться нельзя. Если убрать иконку или поменять порядок, то в следующий раз сервис может выдать совсем другие коды и все иконки непредсказуемо поменяются.&lt;/p&gt;
+
+&lt;p&gt;Если не формировать вместе со шрифтом less-файл, то разработчикам придется в каждом использовании иконки указывать размер кегля, они могут забыть или ошибиться.&lt;/p&gt;
+
+&lt;p&gt;Хорошее решение дает разработчикам все что нужно. Иконка кодируется понятным названием, коды символов и размер подставляются автоматически.&lt;/p&gt;
+
+&lt;h2 id=&quot;Вариант-1-Собираем-и-отдаем-шрифт&quot;&gt;Вариант 1. Собираем и отдаем шрифт&lt;/h2&gt;
+
+&lt;p&gt;Вся сборка идет на компьютере дизайнера. Установленный Sketch не обязателен, а вот без мака ничего не выйдет. Я выложил все необходимые файлы в репозиторий &lt;a href=&quot;https://github.com/mikeozornin/icon-font-public&quot;&gt;mikeozornin/icon-font-public&lt;/a&gt;, скачайте его и распакуйте куда-нибудь.&lt;/p&gt;
+
+&lt;p&gt;Скачать: https://github.com/mikeozornin/icon-font-public/archive/master.zip&lt;/p&gt;
+
+&lt;h3 id=&quot;Шаг-1-Настройка-среды&quot;&gt;Шаг 1. Настройка среды&lt;/h3&gt;
+&lt;p&gt;Все эти заклинания надо произнести один раз, дальше они не понадобятся:&lt;/p&gt;
+
+&lt;p&gt;1) Установить brew. Brew — это такой менеджер пакетов, который легко позволяет ставить программы и библиотеки. Выполнить в терминале команду:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/usr/bin/ruby -e &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;2) С помощью brew установить шрифтообработчики:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew install ttfautohint fontforge --with-python
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;3) Установить node.js, скачать тут (https://nodejs.org/en/) current-версию и действовать по инструкции.&lt;/p&gt;
+
+&lt;p&gt;4) Установить SketchTool. При установленном Sketch выполнить в терминале команду:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/Applications/Sketch.app/Contents/Resources/sketchtool/install.sh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;5) Установить grunt. Выполнить в терминале команду:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;npm install -g grunt-cli
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;Шаг2-Сборка-файла-шрифта&quot;&gt;Шаг 2. Сборка файла шрифта&lt;/h3&gt;
+&lt;p&gt;Для сборки шрифта нужно открыть терминал в корневой папке проекта и произнести заклинание:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;./build.sh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Если в первый раз не сработает, сделайте скрипт выполняемым:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;chmod +x build.sh
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Описанная схема работает так:&lt;/p&gt;
+
+&lt;p&gt;— С помощью SketchTool все, что может быть экспортировано, экспортируется из скетча в SVG-файлы. Обратите внимание на то, что иконка должны быть покрыта слайсом или располагаться на отдельном артборде (артборд лучше).
+— SVG-файлы, полученные на предыдущем шаге, собираются в шрифт. Для этого запускается сборщик шрифта, который все SVG-файлы собирает в шрифт, конвертирует его в нужный формат.
+— Параллельно тот же сборщик формирует HTML-страницу с предварительным просмотром и less-файл для шрифта.&lt;/p&gt;
+
+&lt;p&gt;Каждый раз при сборке шрифта дизайнеру нужно:&lt;/p&gt;
+
+&lt;p&gt;1) Нарисовать иконку.
+2) Собрать шрифт: ./build.sh.
+3) (опционально) Закоммитить sketch-файл, шрифт и SVG-файлы в гит.
+4) Отдать файл шрифта и less-файл разработчику.
+5) Сказать ему название новой иконки, например: my-icons-bell_16.&lt;/p&gt;
+
+&lt;h2 id=&quot;Вариант-2-Собираем-и-отдаем-шрифт-npm-пакетом&quot;&gt;Вариант 2. Собираем и отдаем шрифт NPM-пакетом&lt;/h2&gt;
+&lt;p&gt;Если продуктов, дизайнеров и разработчиков много, возникают вопросы синхронизации.
+Приведу пример: Я собрал для одной команды шрифт, а потом вторая захотела такие же иконки. Должен ли я дать им тот же файл, или собирать отдельно? Отправлять ли двум командам новый файл после того, как добавится иконка? Что делать, если я хочу переделать половину иконок, а часть убрать, как предупредить разработчика, чтобы он был внимателен? Что делать, если я не один, а дизайнеров много?&lt;/p&gt;
+
+&lt;p&gt;Разработчики уже умеют решать подобные проблемы. Для библиотек у них есть менеджеры пакетов и библиотек (менеджер пакетов — это не должность :-). Фронтенд-разработчики подключают библиотеки через NPM-пакеты. Для них это привычная и удобная среда, кроме этого, NPM-пакет сделает передачу шрифта удобней. NPM-репозиторий берет на себя вопросы распространения файла между разработчиками, его версионирования, одновременной поддержки двух разных версий шрифта (новой и еще поддерживаемой старой). Скорей всего, если вы предложите разработчику не передавать файл вручную, а собирать пакет, он будет только рад.&lt;/p&gt;
+
+&lt;p&gt;В этом способе больше шагов, но работать с ним проще. У нас собирается пакетом.&lt;/p&gt;
+
+&lt;h3 id=&quot;Шаг-1-Донастройка-среды&quot;&gt;Шаг 1. Донастройка среды&lt;/h3&gt;
+&lt;p&gt;Нужно настроить среду — как в первом варианте — и дополнительно настроить локальный NPM-репозиторий. Что это такое и как настроить, спросите вашего фронтендера: настройка зависит от принятых в команде соглашений. Кроме этого, попросите его исправить файл package.json из комплекта.&lt;/p&gt;
+
+&lt;h3 id=&quot;Шаг-2-Сборка-файла-шрифта&quot;&gt;Шаг 2. Сборка файла шрифта&lt;/h3&gt;
+&lt;p&gt;Каждый раз при сборке шрифта дизайнеру нужно сделать следующее (&lt;em&gt;курсивом&lt;/em&gt; выделены новые действия):&lt;/p&gt;
+
+&lt;p&gt;1) Нарисовать иконку.
+2) Собрать шрифт: ./build.sh.
+3) Закоммитить sketch-файл, шрифт и SVG-файлы в гит.
+4) &lt;em&gt;Изменить версию пакета в файле package.json, дописать изменения в changelog.&lt;/em&gt;
+5) &lt;em&gt;Закоммитить файлы package.json и changelog.&lt;/em&gt;
+6) &lt;em&gt;Выполнить команду grunt publish.&lt;/em&gt;
+7) Передать разработчику шифровку «Выпустил пакет версии xxx».
+8) Сказать ему название новой иконки, например: my-icons-bell_16.&lt;/p&gt;
+
+&lt;p&gt;Договоритесь с разработчиками, как именовать версии, если они предложат «семвер» — соглашайтесь. Мы с коллегами инкрементируем минор (1.1.1 → 1.1.2), если обратная совместимость шрифта не теряется, — можно смело обновлять шрифт в продукте. Если теряется, то изменяем мажорный (1.1.1 → 1.2.0), — нужно изучить изменения и что-то поправить в коде продукта.&lt;/p&gt;
+
+&lt;h2 id=&quot;Вариант-3-Собираем-и-отдаем-шрифт-nuget-пакетом&quot;&gt;Вариант 3. Собираем и отдаем шрифт Nuget-пакетом&lt;/h2&gt;
+&lt;p&gt;Весь наш интерфейс работает полностью на фронтенде (написан на Angular). Бекенд-разработчики используют Nuget и никак не используют иконки. Поэтому у меня нет опыта сборки Nuget-пакетов.&lt;/p&gt;
+
+&lt;p&gt;Но если кто-то соберет рабочий вариант со скриптами и конфигами, то с удовольствием допишу в пост.&lt;/p&gt;
+
+&lt;h2 id=&quot;На-что-обратить-внимание-при-рисовании-иконок&quot;&gt;На что обратить внимание при рисовании иконок&lt;/h2&gt;
+&lt;p&gt;Иногда иконка, которая выглядит хорошо в Sketch, портится до неузнаваемости в шрифте. Чтобы такого не происходило, перед экспортом иконок не забудьте перевести все в кривые. Проверьте, что в иконке не осталось:&lt;/p&gt;
+
+&lt;p&gt;— радиусов скруглений,
+— бордеров (можно использовать только заливки),
+— текстовых надписей (должны быть переведены в кривые).&lt;/p&gt;
+
+&lt;p&gt;После экспорта проверяйте иконку в демо-HTML-файле. Иногда бывает, что SVG показывается хорошо, а в HTML — нет.&lt;/p&gt;
+
+&lt;h2 id=&quot;Если-что-то-не-работает&quot;&gt;Если что-то не работает&lt;/h2&gt;
+&lt;p&gt;Я не делал пример из поста с нуля, а взял наше рабочее решение и немного его обрезал, чтобы можно было выложить его в паблик. Работоспособность проверял, но мало ли что, может что-то и переобрезал. Пишите, если что-то не работает, или попросите помочь вашего фронтендера, он разберется.&lt;/p&gt;
+
+&lt;p&gt;Пишите, если есть вопросы или пожелания.&lt;/p&gt;</content><author><name></name></author><summary type="html"></summary></entry><entry><title type="html">RxJS - Часть 1, Введение в реактивное программирование</title><link href="/blog/rxjs/reactive" rel="alternate" type="text/html" title="RxJS - Часть 1, Введение в реактивное программирование" /><published>2017-01-30T00:00:00+00:00</published><updated>2017-01-30T00:00:00+00:00</updated><id>/blog/rxjs/reactive</id><content type="html" xml:base="/blog/rxjs/reactive">&lt;h2 id=&quot;a--b--c&quot;&gt;A = B + C&lt;/h2&gt;
+&lt;p&gt;В современном мире сложных высоконагруженных веб приложений, где компоненты одной страницы исчисляются десятками, 
+а изменение состояния одного из них порождает цепочку различных событий по всему приложению, существует 
+закономерная проблема отслеживания таких изменений и управления ими. К решению этой проблемы, а именно к осмыслению
+приложения, построению взаимодействия внутри него и, наконец, написанию кода, можно подойти с разных сторон, однако
+интуитивно логичнее и чище в этом случае выглядит парадигма реактивного программирования.&lt;/p&gt;
+
+&lt;p&gt;Существует множество определений понятия реактивности, которые разнятся от запутанных до очень запутанных
+ и, поначалу, не вносят особой ясности. Хотя, если говорить абстракциями, все не так уж и сложно: &lt;code class=&quot;highlighter-rouge&quot;&gt;A = B + C&lt;/code&gt;&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;В случае императивного программирования после момента присваивания, переменная A будет
+ существовать независимо от B и С на всем протяжении жизненного цикла программы, в то время как в реактивном 
+ программировании при изменении B или C, значение A будет автоматически пересчитано&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Получается, практически все в нашем вышеописанном приложении подчиняется реактивному поведению, а обработкой такого 
+ поведения как раз и занимается реактивное программирование. &lt;strong&gt;Реактивное программирование - обработка параллельных потоков данных&lt;/strong&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;Потоки&quot;&gt;Потоки&lt;/h2&gt;
+
+&lt;p&gt;Поток данных не что иное, как событие, повторяющеесе во времени. Для начала, можно представить в виде
+ потока последовательность кликов пользователя:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/stream-base.png&quot; alt=&quot;поток&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Инициируемые в потоке события можно разделить на три типа: &lt;code class=&quot;highlighter-rouge&quot;&gt;значение&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;ошибка&lt;/code&gt; и &lt;code class=&quot;highlighter-rouge&quot;&gt;завершение потока&lt;/code&gt;.
+В нашем примере завершением будет закрытие пользователем страницы. Поток может получать бесконечное 
+количество событий и в то же время, любое единичное событие может быть представлено в виде потока (тот же самый клик).&lt;/p&gt;
+
+&lt;p&gt;Поток выше изображен в виде &lt;a href=&quot;http://rxmarbles.com/&quot;&gt;марбл-диаграммы&lt;/a&gt;, но есть и альтернативный способ 
+визуализации событий - c помощью ASCII кодировки. RxJS 5 позволяет использовать такие диаграммы 
+при написании тестов (&lt;a href=&quot;http://reactivex.io/rxjs/test-file/spec-js/observables/combineLatest-spec.js.html#lineNumber7&quot;&gt;Observable.combineLatest.spec&lt;/a&gt;)&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; --a---b-c---d---X---|-&amp;gt;
+ 
+ a, b, c, d события значения
+ X ошибка
+ | завершение потока
+ ---&amp;gt; шкала времени
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Помимо &lt;em&gt;кликов&lt;/em&gt;, веб приложение, как правило, должно уметь оперировать множеством как синхронных, так и асинхронных 
+событий, каждые из которых, в свою очередь, могут быть однократными и многократными. К асинхронным событиям можно отнести:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;UI события, любое взаимодействие пользователя с интерфейсом&lt;/li&gt;
+  &lt;li&gt;Запросы к серверу&lt;/li&gt;
+  &lt;li&gt;События устройства, пуш уведомления, системные нотификации&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/Webhook&quot;&gt;Веб хуки&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Асинхронное событие - событие, которое произойдет в какой-либо неопределенный момент в будущем&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Есть и другие варианты объяснения асинхронности, например, с использованием &lt;a href=&quot;http://stackoverflow.com/a/4560233/4486673&quot;&gt;пиццы и World of Warcraft&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Повторение любого из вышеперичисленных асинхронных событий довольно просто представить в формате потока данных за промежуток времени. 
+Сложнее мыслить &lt;em&gt;реактивно&lt;/em&gt; в отношении синхронных, последовательных событий, которыми является, например, &lt;code class=&quot;highlighter-rouge&quot;&gt;массив&lt;/code&gt;&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;forEach&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;item&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; 
+    &lt;span class=&quot;nx&quot;&gt;item&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// событие-значение &lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;Перебрав массив из 5 элементов, мы определили синхронный поток, в котором были инициированы 5 событий &lt;em&gt;значение&lt;/em&gt;
+и одно &lt;em&gt;завершение потока&lt;/em&gt;. Процесс аналогичен сессии пользователя, который 5 раз кликнул по кнопке и закрыл страницу.
+Таким же образом в роли последовательного потока может выступать не только массив, но любой итерабельной объект: &lt;code class=&quot;highlighter-rouge&quot;&gt;Set&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;Map&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;String&lt;/code&gt; и т.д.&lt;/p&gt;
+
+&lt;p&gt;Если посмотреть еще шире, можно переложить эту же концепцию на реальную жизнь и представить в виде потока такие 
+синхронные события как сон, чтение книги, поездка в автобусе и асинхронные - момент закипания чайника, заказ еды на дом. Конечно,
+ синхронность или асинхронность того или иного события можно обсуждать и это весьма интересно, но тем не менее,
+становится понятно, что представить в виде потока можно все, что угодно. И это подводит нас к главной мантре реактивного программирования:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/stream-dog.jpeg&quot; alt=&quot;Все - поток&quot; class=&quot;center&quot; /&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;Чем-обрабатывать-потоки&quot;&gt;Чем обрабатывать потоки?&lt;/h2&gt;
+
+&lt;p&gt;Как мы выяснили, наше приложение - инкубатор всевозможных потоков. Давайте поверхностно рассмотрим средства их обработки.
+Далее речь пойдет об асинхронных событиях, про варианты обработки синхронных событий можно посмотреть здесь: 
+ &lt;a href=&quot;https://lodash.com/docs/&quot;&gt;Lodash&lt;/a&gt;, &lt;a href=&quot;http://ramdajs.com/docs/&quot;&gt;Ramda&lt;/a&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/API/EventTarget&quot;&gt;EventTarget&lt;/a&gt; интерфейс обработки различных UI событий в javascript.
+Клик пользователя, например, можно поймать следующим образом:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight margin-no_top&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;&lt;span class=&quot;nb&quot;&gt;document&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;getElementById&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'button'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;addEventListener&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'click'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;event&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// обработка&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://nodejs.org/api/events.html&quot;&gt;EventEmitter&lt;/a&gt; используется при построении асинхронно-событийной архитектуры в Node.js&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight margin-no_top&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt; &lt;span class=&quot;kr&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;emitter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;EventEmitter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+ 
+ &lt;span class=&quot;nx&quot;&gt;emitter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;on&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'event'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;// обработка&lt;/span&gt;
+ &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+ 
+ &lt;span class=&quot;nx&quot;&gt;emitter&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;emit&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'event'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// пуш события&lt;/span&gt;
+ &lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;http://callbackhell.com/&quot;&gt;Функции обратного вызова&lt;/a&gt; как вариант обработки однократного асинхронного события, например, чтения файла&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight margin-no_top&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;  &lt;span class=&quot;kr&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;cb&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;err&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;err&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// событие-ошибка&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+      
+      &lt;span class=&quot;c1&quot;&gt;// событие-значения&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+   
+  &lt;span class=&quot;nx&quot;&gt;fs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;readFile&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'data.txt'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;cb&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; 
+ &lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise&quot;&gt;Promise&lt;/a&gt; так же используются
+ для однократных асинхронных вычислений&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight margin-no_top&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;&lt;span class=&quot;kr&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;Promise&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;resolve&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;reject&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;// имитация запроса к серверу&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;window&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;setTimeout&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;resolve&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;},&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+
+&lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;then&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;response&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;})&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// событие-значения &lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;catch&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;err&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;})&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// событие-ошибка &lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*&quot;&gt;Генераторы&lt;/a&gt; - функции с 
+возможностью приостановить свое выполнение на некоторое время, после чего возобновить вновь. Своего рода имплементация
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Coroutine&quot;&gt;корутин&lt;/a&gt; в javascript, позволяющая писать асинхронный код в синхронном стиле&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight margin-no_top&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-javascript&quot; data-lang=&quot;javascript&quot;&gt;&lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nx&quot;&gt;ajaxCall&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;response&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;it&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;response&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;});&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;kr&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;request&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s1&quot;&gt;'http://some.url'&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;kr&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;parse&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// событие-значение&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;kr&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;it&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;nx&quot;&gt;it&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;next&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt; &lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API&quot;&gt;Web sockets&lt;/a&gt; и &lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers&quot;&gt;Web workers&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;И экспериментальные, еще не принятые на сегодняшний день в стандарт инструменты, которые, тем не менее, 
+можно использовать посредством &lt;a href=&quot;https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-regenerator&quot;&gt;Babel полифиллов&lt;/a&gt;:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/tc39/ecmascript-asyncawait&quot;&gt;Async functions&lt;/a&gt; были предложены как часть стандарта ES2016. 
+В данный момент фича находится на завершающем этапе принятия - Stage 4. Подробно с асинхронными функциями можно 
+ознакомиться в соответствующем &lt;a href=&quot;https://tc39.github.io/ecmascript-asyncawait/&quot;&gt;предложении&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/jhusain/asyncgenerator&quot;&gt;Async generators&lt;/a&gt; изначально были задуманы для реализации обработки многократных 
+асинхронных событий. В данный момент фича получила более компактное описание на &lt;a href=&quot;https://github.com/tc39/proposal-async-iteration&quot;&gt;Stage 3&lt;/a&gt;,&lt;br /&gt;
+но, возможно, будет реализована в виде &lt;a href=&quot;https://github.com/tc39/proposal-observable&quot;&gt;ECMAScript Observable&lt;/a&gt; - имплементации 
+Observable для стандарта ES2016 (теме Observable посвещена следующая статья из этой серии)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;Причем-тут-rxjs&quot;&gt;Причем тут RxJS?&lt;/h2&gt;
+&lt;p&gt;Было бы удобно иметь единый интерфейс взаимодействия с любым средством событийной обработки. И такой интерфейс
+предоставляет бибилиотека &lt;a href=&quot;https://github.com/ReactiveX/rxjs&quot;&gt;RxJS&lt;/a&gt; (Reactive Extensions for Javascript).&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/blog/assets/images/rx-logo.png&quot; alt=&quot;rxjs-logo&quot; class=&quot;center rx-logo&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;С ее помощью возможно комбинировать между собой потоки различных типов данных, преобразовывать их, отменять, приводить к определенному типу,
+и многое другое. Об этом мы поговорим в следующей статье,
+в которой рассмотрим &lt;code class=&quot;highlighter-rouge&quot;&gt;Observable&lt;/code&gt; - сущность, которую RxJS использует в качестве потока данных.&lt;/p&gt;
+
+&lt;h2 id=&quot;Почитать-и-посмотреть-по-теме&quot;&gt;Почитать и посмотреть по теме&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://gist.github.com/staltz/868e7e9bc2a7b8c1f754&quot;&gt;The introduction to Reactive Programming you’ve been missing&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://learn.javascript.ru/events-and-interfaces&quot;&gt;Основы работы с событиями&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://egghead.io/courses/mastering-asynchronous-programming-the-end-of-the-loop&quot;&gt;Asynchronous Programming: The End of The Loop&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://davidwalsh.name/es6-generators&quot;&gt;The Basics Of ES6 Generators&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><author><name></name></author><summary type="html">A = B + C В современном мире сложных высоконагруженных веб приложений, где компоненты одной страницы исчисляются десятками, а изменение состояния одного из них порождает цепочку различных событий по всему приложению, существует закономерная проблема отслеживания таких изменений и управления ими. К решению этой проблемы, а именно к осмыслению приложения, построению взаимодействия внутри него и, наконец, написанию кода, можно подойти с разных сторон, однако интуитивно логичнее и чище в этом случае выглядит парадигма реактивного программирования.</summary></entry></feed>

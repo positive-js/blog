@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>RxJS - Часть 1, Введение в реактивное программирование</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">        
+    <meta name="description" content="">
+    
+    <link rel="icon" href="/blog/assets/images/favicon.ico">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu+Mono&amp;subset=latin">
+    <!-- Canonical url (https://support.google.com/webmasters/answer/139066) -->
+    <link rel="canonical" href="/blog/rxjs/reactive">
+    
+    <!-- Main CSS File (compiled from _sass forder) -->
+    <link rel="stylesheet" type="text/css" href="/blog/assets/css/main.css">
+</head>
+    <body>
+        <header class="main-header">
+    <div class="wc-container">
+        <h1><a href="/blog/">Positive.JS</a></h1>
+        <ul>
+            <li>
+                <a href="/blog/about">О нас</a><span>/</span>
+            </li>
+            <li>
+                <a href="/blog/blog">Архив</a><span>/</span>
+            </li>
+        </ul>               
+    </div>
+</header>
+
+
+        <div class="page-content wc-container">
+    <div class="post">
+        <h1>RxJS - Часть 1, Введение в реактивное программирование</h1>
+        <p class="post-meta">
+            
+                <span class="categories">
+                
+                    rxjs и 10 мин чтения
+                
+                </span> |
+            
+            <span class="post-date">
+                
+                    30.01.2017 
+                
+            </span>
+        </p>
+        <div class="post">
+            <h2 id="a--b--c">A = B + C</h2>
+<p>В современном мире сложных высоконагруженных веб приложений, где компоненты одной страницы исчисляются десятками, 
+а изменение состояния одного из них порождает цепочку различных событий по всему приложению, существует 
+закономерная проблема отслеживания таких изменений и управления ими. К решению этой проблемы, а именно к осмыслению
+приложения, построению взаимодействия внутри него и, наконец, написанию кода, можно подойти с разных сторон, однако
+интуитивно логичнее и чище в этом случае выглядит парадигма реактивного программирования.</p>
+
+<p>Существует множество определений понятия реактивности, которые разнятся от запутанных до очень запутанных
+ и, поначалу, не вносят особой ясности. Хотя, если говорить абстракциями, все не так уж и сложно: <code class="highlighter-rouge">A = B + C</code></p>
+
+<blockquote>
+  <p>В случае императивного программирования после момента присваивания, переменная A будет
+ существовать независимо от B и С на всем протяжении жизненного цикла программы, в то время как в реактивном 
+ программировании при изменении B или C, значение A будет автоматически пересчитано</p>
+</blockquote>
+
+<p>Получается, практически все в нашем вышеописанном приложении подчиняется реактивному поведению, а обработкой такого 
+ поведения как раз и занимается реактивное программирование. <strong>Реактивное программирование - обработка параллельных потоков данных</strong></p>
+
+<h2 id="Потоки">Потоки</h2>
+
+<p>Поток данных не что иное, как событие, повторяющеесе во времени. Для начала, можно представить в виде
+ потока последовательность кликов пользователя:</p>
+
+<p><img src="/blog/assets/images/stream-base.png" alt="поток" class="center" /></p>
+
+<p>Инициируемые в потоке события можно разделить на три типа: <code class="highlighter-rouge">значение</code>, <code class="highlighter-rouge">ошибка</code> и <code class="highlighter-rouge">завершение потока</code>.
+В нашем примере завершением будет закрытие пользователем страницы. Поток может получать бесконечное 
+количество событий и в то же время, любое единичное событие может быть представлено в виде потока (тот же самый клик).</p>
+
+<p>Поток выше изображен в виде <a href="http://rxmarbles.com/">марбл-диаграммы</a>, но есть и альтернативный способ 
+визуализации событий - c помощью ASCII кодировки. RxJS 5 позволяет использовать такие диаграммы 
+при написании тестов (<a href="http://reactivex.io/rxjs/test-file/spec-js/observables/combineLatest-spec.js.html#lineNumber7">Observable.combineLatest.spec</a>)</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code> --a---b-c---d---X---|-&gt;
+ 
+ a, b, c, d события значения
+ X ошибка
+ | завершение потока
+ ---&gt; шкала времени
+</code></pre>
+</div>
+
+<p>Помимо <em>кликов</em>, веб приложение, как правило, должно уметь оперировать множеством как синхронных, так и асинхронных 
+событий, каждые из которых, в свою очередь, могут быть однократными и многократными. К асинхронным событиям можно отнести:</p>
+<ul>
+  <li>UI события, любое взаимодействие пользователя с интерфейсом</li>
+  <li>Запросы к серверу</li>
+  <li>События устройства, пуш уведомления, системные нотификации</li>
+  <li><a href="https://en.wikipedia.org/wiki/Webhook">Веб хуки</a></li>
+</ul>
+
+<blockquote>
+  <p>Асинхронное событие - событие, которое произойдет в какой-либо неопределенный момент в будущем</p>
+</blockquote>
+
+<p>Есть и другие варианты объяснения асинхронности, например, с использованием <a href="http://stackoverflow.com/a/4560233/4486673">пиццы и World of Warcraft</a></p>
+
+<p>Повторение любого из вышеперичисленных асинхронных событий довольно просто представить в формате потока данных за промежуток времени. 
+Сложнее мыслить <em>реактивно</em> в отношении синхронных, последовательных событий, которыми является, например, <code class="highlighter-rouge">массив</code></p>
+
+<figure class="highlight"><pre><code class="language-javascript" data-lang="javascript"><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">].</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">item</span> <span class="o">=&gt;</span> <span class="p">{</span> 
+    <span class="nx">item</span><span class="p">;</span> <span class="c1">// событие-значение </span>
+<span class="p">});</span></code></pre></figure>
+
+<p>Перебрав массив из 5 элементов, мы определили синхронный поток, в котором были инициированы 5 событий <em>значение</em>
+и одно <em>завершение потока</em>. Процесс аналогичен сессии пользователя, который 5 раз кликнул по кнопке и закрыл страницу.
+Таким же образом в роли последовательного потока может выступать не только массив, но любой итерабельной объект: <code class="highlighter-rouge">Set</code>, <code class="highlighter-rouge">Map</code>, <code class="highlighter-rouge">String</code> и т.д.</p>
+
+<p>Если посмотреть еще шире, можно переложить эту же концепцию на реальную жизнь и представить в виде потока такие 
+синхронные события как сон, чтение книги, поездка в автобусе и асинхронные - момент закипания чайника, заказ еды на дом. Конечно,
+ синхронность или асинхронность того или иного события можно обсуждать и это весьма интересно, но тем не менее,
+становится понятно, что представить в виде потока можно все, что угодно. И это подводит нас к главной мантре реактивного программирования:</p>
+
+<p><img src="/blog/assets/images/stream-dog.jpeg" alt="Все - поток" class="center" /></p>
+
+<h2 id="Чем-обрабатывать-потоки">Чем обрабатывать потоки?</h2>
+
+<p>Как мы выяснили, наше приложение - инкубатор всевозможных потоков. Давайте поверхностно рассмотрим средства их обработки.
+Далее речь пойдет об асинхронных событиях, про варианты обработки синхронных событий можно посмотреть здесь: 
+ <a href="https://lodash.com/docs/">Lodash</a>, <a href="http://ramdajs.com/docs/">Ramda</a></p>
+
+<ul>
+  <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget">EventTarget</a> интерфейс обработки различных UI событий в javascript.
+Клик пользователя, например, можно поймать следующим образом:</li>
+</ul>
+
+<figure class="highlight margin-no_top"><pre><code class="language-javascript" data-lang="javascript"><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">'button'</span><span class="p">).</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s1">'click'</span><span class="p">,</span> <span class="nx">event</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="c1">// обработка</span>
+<span class="p">});</span></code></pre></figure>
+
+<ul>
+  <li><a href="https://nodejs.org/api/events.html">EventEmitter</a> используется при построении асинхронно-событийной архитектуры в Node.js</li>
+</ul>
+
+<figure class="highlight margin-no_top"><pre><code class="language-javascript" data-lang="javascript"> <span class="kr">const</span> <span class="nx">emitter</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">EventEmitter</span><span class="p">();</span>
+ 
+ <span class="nx">emitter</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'event'</span><span class="p">,</span> <span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="c1">// обработка</span>
+ <span class="p">});</span>
+ 
+ <span class="nx">emitter</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">'event'</span><span class="p">,</span> <span class="nx">data</span><span class="p">);</span> <span class="c1">// пуш события</span>
+ </code></pre></figure>
+
+<ul>
+  <li><a href="http://callbackhell.com/">Функции обратного вызова</a> как вариант обработки однократного асинхронного события, например, чтения файла</li>
+</ul>
+
+<figure class="highlight margin-no_top"><pre><code class="language-javascript" data-lang="javascript">  <span class="kr">const</span> <span class="nx">cb</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// событие-ошибка</span>
+      <span class="p">}</span>
+      
+      <span class="c1">// событие-значения</span>
+  <span class="p">}</span>
+   
+  <span class="nx">fs</span><span class="p">.</span><span class="nx">readFile</span><span class="p">(</span><span class="s1">'data.txt'</span><span class="p">,</span> <span class="nx">cb</span><span class="p">);</span> 
+ </code></pre></figure>
+
+<ul>
+  <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise">Promise</a> так же используются
+ для однократных асинхронных вычислений</li>
+</ul>
+
+<figure class="highlight margin-no_top"><pre><code class="language-javascript" data-lang="javascript"><span class="kr">const</span> <span class="nx">request</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span> <span class="nx">reject</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="c1">// имитация запроса к серверу</span>
+    <span class="nb">window</span><span class="p">.</span><span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="nx">resolve</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span> <span class="p">},</span> <span class="mi">3000</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="nx">request</span>
+    <span class="p">.</span><span class="nx">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="p">...</span> <span class="p">})</span> <span class="c1">// событие-значения </span>
+    <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">err</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="p">...</span> <span class="p">})</span> <span class="c1">// событие-ошибка </span></code></pre></figure>
+
+<ul>
+  <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*">Генераторы</a> - функции с 
+возможностью приостановить свое выполнение на некоторое время, после чего возобновить вновь. Своего рода имплементация
+<a href="https://en.wikipedia.org/wiki/Coroutine">корутин</a> в javascript, позволяющая писать асинхронный код в синхронном стиле</li>
+</ul>
+
+<figure class="highlight margin-no_top"><pre><code class="language-javascript" data-lang="javascript"><span class="kd">function</span> <span class="nx">request</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">ajaxCall</span><span class="p">(</span><span class="nx">url</span><span class="p">,</span> <span class="nx">response</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="nx">it</span><span class="p">.</span><span class="nx">next</span><span class="p">(</span><span class="nx">response</span><span class="p">);</span> <span class="p">});</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="o">*</span><span class="nx">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kr">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">yield</span> <span class="nx">request</span><span class="p">(</span><span class="s1">'http://some.url'</span><span class="p">);</span>
+    <span class="kr">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span> <span class="c1">// событие-значение</span>
+<span class="p">}</span>
+
+<span class="kr">const</span> <span class="nx">it</span> <span class="o">=</span> <span class="nx">main</span><span class="p">();</span>
+<span class="nx">it</span><span class="p">.</span><span class="nx">next</span><span class="p">();</span> </code></pre></figure>
+
+<ul>
+  <li><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API">Web sockets</a> и <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers">Web workers</a></li>
+</ul>
+
+<p>И экспериментальные, еще не принятые на сегодняшний день в стандарт инструменты, которые, тем не менее, 
+можно использовать посредством <a href="https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-regenerator">Babel полифиллов</a>:</p>
+
+<ul>
+  <li><a href="https://github.com/tc39/ecmascript-asyncawait">Async functions</a> были предложены как часть стандарта ES2016. 
+В данный момент фича находится на завершающем этапе принятия - Stage 4. Подробно с асинхронными функциями можно 
+ознакомиться в соответствующем <a href="https://tc39.github.io/ecmascript-asyncawait/">предложении</a></li>
+  <li><a href="https://github.com/jhusain/asyncgenerator">Async generators</a> изначально были задуманы для реализации обработки многократных 
+асинхронных событий. В данный момент фича получила более компактное описание на <a href="https://github.com/tc39/proposal-async-iteration">Stage 3</a>,<br />
+но, возможно, будет реализована в виде <a href="https://github.com/tc39/proposal-observable">ECMAScript Observable</a> - имплементации 
+Observable для стандарта ES2016 (теме Observable посвещена следующая статья из этой серии)</li>
+</ul>
+
+<h2 id="Причем-тут-rxjs">Причем тут RxJS?</h2>
+<p>Было бы удобно иметь единый интерфейс взаимодействия с любым средством событийной обработки. И такой интерфейс
+предоставляет бибилиотека <a href="https://github.com/ReactiveX/rxjs">RxJS</a> (Reactive Extensions for Javascript).</p>
+
+<p><img src="/blog/assets/images/rx-logo.png" alt="rxjs-logo" class="center rx-logo" /></p>
+
+<p>С ее помощью возможно комбинировать между собой потоки различных типов данных, преобразовывать их, отменять, приводить к определенному типу,
+и многое другое. Об этом мы поговорим в следующей статье,
+в которой рассмотрим <code class="highlighter-rouge">Observable</code> - сущность, которую RxJS использует в качестве потока данных.</p>
+
+<h2 id="Почитать-и-посмотреть-по-теме">Почитать и посмотреть по теме</h2>
+<ul>
+  <li><a href="https://gist.github.com/staltz/868e7e9bc2a7b8c1f754">The introduction to Reactive Programming you’ve been missing</a></li>
+  <li><a href="https://learn.javascript.ru/events-and-interfaces">Основы работы с событиями</a></li>
+  <li><a href="https://egghead.io/courses/mastering-asynchronous-programming-the-end-of-the-loop">Asynchronous Programming: The End of The Loop</a></li>
+  <li><a href="https://davidwalsh.name/es6-generators">The Basics Of ES6 Generators</a></li>
+</ul>
+
+        </div>
+    </div>
+
+    
+    <div class="related">
+        <h4>Похожие статьи</h4>
+        <ul class="posts">
+            
+            <li>
+                <span>
+                
+                    03.09.2017 
+                 &raquo;</span>
+                <a href="/blog/css-font-metrics-line-height-and-vertical-align">Deep dive CSS: font metrics, line-height and vertical-align</a>
+            </li>
+            
+            <li>
+                <span>
+                
+                    05.04.2017 
+                 &raquo;</span>
+                <a href="/blog/iconfont">Как собрать иконочный шрифт из файла скетча</a>
+            </li>
+            
+        </ul>
+    </div>
+    
+
+    <div class="post-footer">
+        <div class="column-1">
+            
+                <span><< Предыдущая статья</span>
+            
+        </div>
+        <div class="column-2"><a href="/blog/ ">Домашняя страница</a></div>
+        <div class="column-3">
+            
+                <a href="/blog/iconfont">Следующая статья >></a>
+            
+        </div>
+    </div>
+</div>
+
+        <footer class="main-footer">
+    <div class="wc-container">  
+        <div class="column one">
+            <h6>Ссылки</h6>
+            <ul class="menu">
+                <li><a href="/blog/about">О нас</a></li>
+                <li><a href="/blog/blog">Архив</a></li>
+                <li><a href="https://ptsecurity.com">PTSecurity</a></li>
+            </ul>                    
+        </div>
+        <div class="column two">
+            <h6>Социальные сети</h6>
+
+<ul class="social-media">
+
+    
+    <li>
+        <a title="ptsecurity on Twitter" 
+            href="https://twitter.com/ptsecurity" 
+            class="twitter wc-img-replace" target="_blank">Twitter</a>
+    </li>   
+    
+
+    
+    <li>
+        <a title="positive-js on Github" 
+            href="https://github.com/positive-js" 
+            class="github wc-img-replace" target="_blank">Github</a>
+    </li>
+     
+
+    <li>
+        <a title="positivejs on Telegram" 
+            href="https://t.me/positivejs" 
+            class="telegram wc-img-replace" target="_blank">Telegram</a>
+    </li>
+</ul>
+
+        </div>
+    </div>
+    <p class="wc-container disclaimer">
+        Powered by <a href="http://jekyllrb.com" target="_blank">Jekyll</a>
+    </p>
+</footer>
+
+        <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-92531585-1', 'auto');
+    ga('send', 'pageview');
+</script>
+    </body>
+</html>

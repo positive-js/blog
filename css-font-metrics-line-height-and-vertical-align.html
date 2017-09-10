@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Deep dive CSS: font metrics, line-height and vertical-align</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">        
+    <meta name="description" content="">
+    
+    <link rel="icon" href="/blog/assets/images/favicon.ico">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu+Mono&amp;subset=latin">
+    <!-- Canonical url (https://support.google.com/webmasters/answer/139066) -->
+    <link rel="canonical" href="/blog/css-font-metrics-line-height-and-vertical-align">
+    
+    <!-- Main CSS File (compiled from _sass forder) -->
+    <link rel="stylesheet" type="text/css" href="/blog/assets/css/main.css">
+</head>
+    <body>
+        <header class="main-header">
+    <div class="wc-container">
+        <h1><a href="/blog/">Positive.JS</a></h1>
+        <ul>
+            <li>
+                <a href="/blog/about">О нас</a><span>/</span>
+            </li>
+            <li>
+                <a href="/blog/blog">Архив</a><span>/</span>
+            </li>
+        </ul>               
+    </div>
+</header>
+
+
+        <div class="page-content wc-container">
+    <div class="post">
+        <h1>Deep dive CSS: font metrics, line-height and vertical-align</h1>
+        <p class="post-meta">
+            
+                <span class="categories">
+                
+                    CSS, fonts, и 30 мин чтения
+                
+                </span> |
+            
+            <span class="post-date">
+                
+                    03.09.2017 
+                
+            </span>
+        </p>
+        <div class="post">
+            <p><code class="highlighter-rouge">line-height</code> и <code class="highlighter-rouge">vertical-align</code> — это простые свойства CSS. Настолько простые, что большинство из нас уверены, что понимают, как они работают и как их использовать. К сожалению, это не так — на самом деле они, пожалуй, являются самыми сложными свойствами, поскольку играют важную роль в создании малоизвестной особенности CSS под названием <strong>«строчный контекст форматирования»</strong> (inline formatting context).</p>
+
+<p>Например, <code class="highlighter-rouge">line-height</code> можно задать в виде длины или безразмерного значения, но его значение по умолчанию — <code class="highlighter-rouge">normal</code> (стандартное). Хорошо, но что значит «стандартное»? Зачастую пишут, что это (как правило) 1, или, может быть, 1,2. Даже в <a href="https://www.w3.org/TR/CSS2/visudet.html#propdef-line-height">спецификации CSS нет четкого ответа на данный вопрос</a>.</p>
+
+<p>Нам известно, что безразмерное значение <code class="highlighter-rouge">line-height</code> зависит от значения <code class="highlighter-rouge">font-size</code>, но проблема в том, что <code class="highlighter-rouge">font-size: 100px</code> выглядит по-разному для разных гарнитур. В связи с этим возникает вопрос: всегда ли <code class="highlighter-rouge">line-height</code> будет одинаковым или может различаться? Действительно ли это значение находится в промежутке от 1 до 1,2? А как <code class="highlighter-rouge">vertical-align</code> влияет на <code class="highlighter-rouge">line-height</code>?</p>
+
+<p>Давайте углубимся в не самый простой механизм CSS…</p>
+
+<h2 id="Начнем-с-разговора-о-font-size">Начнем с разговора о <code class="highlighter-rouge">font-size</code></h2>
+
+<p>Рассмотрим этот простой HTML-код с тегом <code class="highlighter-rouge">&lt;p&gt;</code>, содержащим три элемента <code class="highlighter-rouge">&lt;span&gt;</code>, каждый из которых со своим font-family:</p>
+
+<div class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;p&gt;</span>
+    <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"a"</span><span class="nt">&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+    <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"b"</span><span class="nt">&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+    <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"c"</span><span class="nt">&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+<span class="nt">&lt;/p&gt;</span>
+</code></pre>
+</div>
+
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span>  <span class="p">{</span> <span class="nl">font-size</span><span class="p">:</span> <span class="m">100px</span> <span class="p">}</span>
+<span class="nc">.a</span> <span class="p">{</span> <span class="nl">font-family</span><span class="p">:</span> <span class="n">Helvetica</span> <span class="p">}</span>
+<span class="nc">.b</span> <span class="p">{</span> <span class="nl">font-family</span><span class="p">:</span> <span class="n">Gruppo</span> <span class="p">}</span>
+<span class="nc">.c</span> <span class="p">{</span> <span class="nl">font-family</span><span class="p">:</span> <span class="n">Catamaran</span> <span class="p">}</span>
+</code></pre>
+</div>
+
+<p>При использовании одного и того же <code class="highlighter-rouge">font-size</code> в разных гарнитурах высота получается различной:</p>
+
+<p><img src="/blog/assets/images/line-height/font-size.png" alt="image" class="center" /></p>
+
+<p>Даже если нам известно об этой особенности, почему <code class="highlighter-rouge">font-size: 100px</code> не создает элементы высотой 100px? Я измерил эти значения: Helvetica — 115px, Gruppo — 97px и Catamaran — 164px.</p>
+
+<p><img src="/blog/assets/images/line-height/font-size-line-height.png" alt="image" class="center" /></p>
+
+<p>Хотя на первый взгляд это выглядит несколько странно, все вполне ожидаемо — <strong>причина в самом шрифте</strong>.Как это работает:</p>
+<ul>
+  <li>Шрифт задает свой <a href="http://designwithfontforge.com/en-US/The_EM_Square.html">em-квадрат</a> (em-square) (он же UPM, units per em — единиц на кегельную площадку) — своего рода площадку, в рамках которой будет рисоваться каждый символ. В этом квадрате для измерения используются относительные единицы, и, как правило, для него принимаются размеры 1000 единиц. Хотя также бывает 1024, 2048 или иное количество единиц.</li>
+  <li>В зависимости от количества относительных единиц задаются метрики шрифтов, такие как высота верхних и нижних выносных элементов (ascender/descender), прописных и строчных букв. Некоторые значения могут выходить за рамки em-квадрата.</li>
+  <li>В браузере относительные единицы масштабируются до необходимого <code class="highlighter-rouge">font-size</code>.</li>
+</ul>
+
+<p>Возьмем шрифт Catamaran и откроем его в <a href="https://fontforge.github.io/en-US/">FontForge</a> для получения метрик:</p>
+<ul>
+  <li>em-квадрат принят за 1000 единиц;</li>
+  <li>высота верхних выносных элементов составляет 1100 единиц, а нижних — 540.</li>
+</ul>
+
+<p>После нескольких проверок выяснилось, что браузеры на Mac OS используют значения HHead Ascent/Descent, а на Windows — Win Ascent/Descent (эти значения могут различаться). Помимо этого, высота прописных букв Capital Height составляет 680 единиц, а строчных X height — 485.</p>
+
+<p><img src="/blog/assets/images/line-height/font-forge-metrics.png" alt="image" class="center" /></p>
+
+<p>Таким образом, шрифт Catamaran использует 1100 + 540 единиц в em-квадрате, состоящем из 1000 единиц, и поэтому при размере font-size: 100px получается высота 164px. Данная вычисленная высота определяет <strong>область содержимого (content-area) элемента</strong> (этот термин будет использоваться далее по тексту). Можете считать область содержимого областью, к которой применяется свойство <code class="highlighter-rouge">background</code>.</p>
+
+<p>Можно также предположить, что высота прописных букв составляет 68px (680 единиц), а строчных (x-высота) — 49px (485 единиц). В результате 1ex = 49px и 1em = 100px, а не 164px (к счастью, em зависит от <code class="highlighter-rouge">font-size</code>, а не от вычисленной высоты).</p>
+
+<p><img src="/blog/assets/images/line-height/upm-px-equivalent.png" alt="image" class="center" /></p>
+
+<p>Прежде чем нырнуть глубже, рассмотрим основные моменты, с которыми придется столкнуться. Элемент <code class="highlighter-rouge">&lt;p&gt;</code> при отображении на экране может состоять из нескольких строк с соответствующей шириной. Каждая строка состоит из одного или нескольких строчных элементов (inline elements)(HTML-тегов или анонимных строчных элементов для текстового содержимого) и называется контейнером строки (line-box). <strong>Высота контейнера строки зависит от высот его дочерних элементов</strong>. То есть браузер вычисляет высоту каждого строчного элемента, а по ней — высоту контейнера строки (от самой верхней до самой нижней точки ее дочерних элементов). В результате высоты контейнера строки всегда достаточно, чтобы вместить все его дочерние элементы (по умолчанию).</p>
+
+<p><em>Каждый HTML-элемент на самом деле представляет собой стопку контейнеров строки. Если вам известна высота всех контейнеров строки, то известна и высота элемента.</em></p>
+
+<p>При изменении приведенного выше HTML-кода следующим образом:</p>
+<div class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;p&gt;</span>
+    Good design will be better.
+    <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"a"</span><span class="nt">&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+    <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"b"</span><span class="nt">&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+    <span class="nt">&lt;span</span> <span class="na">class=</span><span class="s">"c"</span><span class="nt">&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+    We get to make a consequence.
+<span class="nt">&lt;/p&gt;</span>
+</code></pre>
+</div>
+<p>будет сгенерировано три контейнера строки:</p>
+<ul>
+  <li>в первом и последнем будет по одному анонимному строчному элементу (текстовое содержимое);</li>
+  <li>во втором будет два анонимных строчных элемента и 3 элемента <code class="highlighter-rouge">&lt;span&gt;</code>.</li>
+</ul>
+
+<p><img src="/blog/assets/images/line-height/line-boxes.png" alt="image" class="center" /></p>
+
+<p>Отчетливо видно, что второй контейнер строки больше остальных по высоте из-за вычисленной области содержимого его дочерних элементов, точнее того, который использует шрифт Catamaran.</p>
+
+<p><strong>Сложным моментом в создании контейнера строки является то, что мы, по сути, не можем ни увидеть, ни управлять им через CSS.</strong> Даже применение фона к <code class="highlighter-rouge">::first-line</code> не помогает отобразить высоту первого контейнера строки.</p>
+
+<h2 id="line-height-о-проблемах-и-прочих-вопросах"><code class="highlighter-rouge">line-height</code>: о проблемах и прочих вопросах</h2>
+
+<p>До этого момента я ввел два понятия — область содержимого и контейнер строки. Если вы внимательно читали, то заметили, что высота контейнера строки вычисляется на основании высоты его дочерних элементов, но не говорил, что на основании высоты области содержимого его дочерних элементов. А это большая разница.</p>
+
+<p>Даже если это может показаться странным, <strong>у строчного элемента есть две различных высоты: высота области содержимого и высота виртуальной области (virtual-area)</strong> (я сам придумал термин «виртуальная область», поскольку эту высоту мы увидеть не можем; в спецификации этого термина вы не найдете).</p>
+<ul>
+  <li>Высота области содержимого определяется метриками шрифта (как мы уже видели ранее).</li>
+  <li>Высота виртуальной области (virtual-area) представляет собой <code class="highlighter-rouge">line-height</code>, и это — высота, которая <strong>используется для вычисления высоты контейнера строки</strong>.</li>
+</ul>
+
+<p><img src="/blog/assets/images/line-height/line-height.png" alt="image" class="center" /></p>
+
+<p>Кроме того, сказанное опровергает распространенное мнение о том, что <code class="highlighter-rouge">line-height</code> — это расстояние между базовыми линиями (baseline). В CSS это не так.</p>
+
+<p><img src="/blog/assets/images/line-height/line-height-yes-no.png" alt="image" class="center" /></p>
+
+<p><em>В других редакторских программах это может быть расстоянием между базовыми линиями. Например, в Word и Photoshop это так и есть. Основная разница в том, что в CSS это расстояние есть и для первой строки</em>.</p>
+
+<p>Вычисленная разница в высоте между виртуальной областью и областью содержимого называется интерлиньяж (leading). Одна половина интерлиньяжа добавляется сверху к области содержимого, а вторая — снизу. Поэтому область содержимого всегда находится по центру виртуальной области.</p>
+
+<p>В зависимости от вычисленного значения <code class="highlighter-rouge">line-height</code> (виртуальная область) может быть равной, больше или меньше области содержимого. Если виртуальная область меньше, то значение интерлиньяжа отрицательное и контейнер строки визуально меньше своих дочерних элементов по высоте.</p>
+
+<p>Есть и другие виды строчных элементов:</p>
+<ul>
+  <li>замещаемые строчные элементы (<code class="highlighter-rouge">&lt;img&gt;</code>, <code class="highlighter-rouge">&lt;input&gt;</code>, <code class="highlighter-rouge">&lt;svg&gt;</code> и т. д.);</li>
+  <li><code class="highlighter-rouge">inline-block</code> и все элементы типа <code class="highlighter-rouge">inline-*</code>;</li>
+  <li>строчные элементы, которые задействованы в особом контексте форматирования (например, в элементе flexbox все flex-компоненты блокофицируются).</li>
+</ul>
+
+<p>Для таких особых строчных элементов высота рассчитывается на основе их свойств <code class="highlighter-rouge">height</code>, <code class="highlighter-rouge">margin</code> и <code class="highlighter-rouge">border</code>. Если для height указано значение auto, то применяется <code class="highlighter-rouge">line-height</code>, и высота области содержимого равна line-height.</p>
+
+<p><img src="/blog/assets/images/line-height/line-height-inline-block.png" alt="image" class="center" /></p>
+
+<p>И все же проблема остается прежней: каково значение normal для <code class="highlighter-rouge">line-height</code>? Ответ на этот вопрос, как и в случае вычисления области содержимого, нужно искать среди метрик шрифта.
+Итак, вернемся к FontForge. Размер em-квадрата для Catamaran равняется 1000, но мы наблюдаем много значений для верхних и нижних выносных элементов:</p>
+
+<ul>
+  <li>Общие значения Ascent/Descent: высота верхнего выносного элемента — 770, нижнего — 230. Используются для создания символов (таблица «OS/2»).</li>
+  <li>Метрики Ascent/Descent: высота верхнего выносного элемента — 1100, нижнего — 540. Используются для определения высоты области содержимого (таблицы «hhea» и «OS/2»).</li>
+  <li>Метрика Line Gap (междустрочный интервал). Используется для определения <code class="highlighter-rouge">line-height: normal</code>, данное значение прибавляется к метрикам Ascent/Descent (таблица «hhea»).</li>
+</ul>
+
+<p>В нашем случае шрифт Catamaran определяет, что междустрочный интервал равен 0 единиц, и, таким образом, <code class="highlighter-rouge">line-height: normal</code> будет равняться области содержимого, которая составляет 1640 единиц или 1,64.</p>
+
+<p>В качестве сравнения: для шрифта Arial em-квадрат равен 2048 единиц, высота верхнего выносного элемента — 1854, нижнего — 434, междустрочный интервал — 67. Таким образом, при <code class="highlighter-rouge">font-size: 100px</code> область содержимого составит 112px (1117 единиц), а значение <code class="highlighter-rouge">line-height: normal</code> — 115px (1150 единиц или 1,15). Все эти метрики индивидуальны для каждого шрифта и задаются дизайнером шрифта.</p>
+
+<p>Следовательно, задавать <code class="highlighter-rouge">line-height: 1</code> неэффективно. Напомню вам, что безразмерные значения зависят от <code class="highlighter-rouge">font-size</code>, а не от области содержимого, а то, что размер области содержимого превышает размер виртуальной области, является причиной множества наших проблем.</p>
+
+<p><img src="/blog/assets/images/line-height/line-height-1.png" alt="image" class="center" /></p>
+
+<p>Но причина не только в <code class="highlighter-rouge">line-height: 1</code>. Если уж на то пошло, из 1117 шрифтов, установленных на моем компьютере (да, я установил все шрифты из Google Web Fonts), у 1059 шрифтов, то есть в 95%, вычисленный показатель <code class="highlighter-rouge">line-height</code> больше 1. Вообще, их вычисленный показатель <code class="highlighter-rouge">line-height</code> варьируется от 0,618 до 3,378. (Вам не показалось — 3,378!)</p>
+
+<p>Небольшие подробности по поводу расчета <code class="highlighter-rouge">line-box</code>:</p>
+
+<ul>
+  <li>Для строчных элементов — padding и border увеличивают область фона, но не высоту области содержимого (и не высоту контейнера строки). Поэтому область содержимого — это не всегда то, что видно на экране. От <code class="highlighter-rouge">margin-top</code> и <code class="highlighter-rouge">margin-bottom</code> нет никакого эффекта.</li>
+  <li>Для замещаемых строчных элементов, элементов типа <code class="highlighter-rouge">inline-block</code> и блокофицированных строчных элементов — <code class="highlighter-rouge">padding</code>, <code class="highlighter-rouge">margin</code> и <code class="highlighter-rouge">border</code> увеличивают <code class="highlighter-rouge">height</code> и, следовательно, высоту области содержимого и контейнера строки.</li>
+</ul>
+
+<h2 id="vertical-align-то-свойство-которое-управляет-всем">vertical-align: то свойство, которое управляет всем</h2>
+<p>Я еще не останавливался подробно на свойстве <code class="highlighter-rouge">vertical-align</code>, хотя оно является основным фактором для вычисления высоты контейнера строки. Можно даже сказать, что <code class="highlighter-rouge">vertical-align</code> может играть ведущую роль в строчном контексте форматирования.</p>
+
+<p>Его значение по умолчанию — <code class="highlighter-rouge">baseline</code>. Помните такие метрики шрифта, как высота верхнего и нижнего выносных элементов (ascender/descender)? Эти значения определяют, где находится базовая линия и, следовательно, соотношение между верхней и нижней частями. Поскольку соотношение между верхним и нижним выносными элементами редко бывает 50/50, это может приводить к неожиданным результатам, например с элементами того же уровня.</p>
+
+<p>Начнем с такого кода:</p>
+
+<div class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;p&gt;</span>
+    <span class="nt">&lt;span&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+    <span class="nt">&lt;span&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+<span class="nt">&lt;/p&gt;</span>
+</code></pre>
+</div>
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span> <span class="p">{</span>
+    <span class="nl">font-family</span><span class="p">:</span> <span class="n">Catamaran</span><span class="p">;</span>
+    <span class="nl">font-size</span><span class="p">:</span> <span class="m">100px</span><span class="p">;</span>
+    <span class="nl">line-height</span><span class="p">:</span> <span class="m">200px</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Тег <code class="highlighter-rouge">&lt;p&gt;</code> с двумя одноуровневыми элементами <code class="highlighter-rouge">&lt;span&gt;</code>, наследующими <code class="highlighter-rouge">font-family</code>, <code class="highlighter-rouge">font-size</code> и фиксированную <code class="highlighter-rouge">line-height</code>. Базовые линии совпадают, и высота контейнера строки равна их <code class="highlighter-rouge">line-height</code>.</p>
+
+<p><img src="/blog/assets/images/line-height/vertical-align-baseline.png" alt="image" class="center" /></p>
+
+<p>Но что, если у второго элемента <code class="highlighter-rouge">font-size</code> будет меньше?</p>
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">span</span><span class="nd">:last-child</span> <span class="p">{</span>
+    <span class="nl">font-size</span><span class="p">:</span> <span class="m">50px</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<p>Как бы странно это ни звучало, выравнивание базовой линии, выставленной по умолчанию, может привести к увеличению высоты (!) контейнера строки, как показано на рисунке ниже. Напоминаю, что высота контейнера строки рассчитывается от самой верхней до самой нижней точки его дочерних элементов.</p>
+
+<p><img src="/blog/assets/images/line-height/vertical-align-baseline-nok.png" alt="image" class="center" /></p>
+
+<p>Это могло бы стать доводом в пользу безразмерных значений <code class="highlighter-rouge">line-height</code>, но иногда требуются фиксированные значения для создания идеального вертикального ритма. Честно говоря, независимо от того, что вы выберете, у вас всегда будут проблемы с выравниванием строки.</p>
+
+<p>Рассмотрим еще один пример. Тег <code class="highlighter-rouge">&lt;p&gt;</code> с <code class="highlighter-rouge">line-height: 200px</code>, который содержит один единственный <code class="highlighter-rouge">&lt;span&gt;</code>, наследующий его <code class="highlighter-rouge">line-height</code></p>
+
+<div class="language-html highlighter-rouge"><pre class="highlight"><code><span class="nt">&lt;p&gt;</span>
+    <span class="nt">&lt;span&gt;</span>Ba<span class="nt">&lt;/span&gt;</span>
+<span class="nt">&lt;/p&gt;</span>
+</code></pre>
+</div>
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span> <span class="p">{</span>
+    <span class="nl">line-height</span><span class="p">:</span> <span class="m">200px</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="nt">span</span> <span class="p">{</span>
+    <span class="nl">font-family</span><span class="p">:</span> <span class="n">Catamaran</span><span class="p">;</span>
+    <span class="nl">font-size</span><span class="p">:</span> <span class="m">100px</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Какова высота контейнера строки? Мы могли бы предположить, что 200px, но это не так. Проблема в том, что у <code class="highlighter-rouge">&lt;p&gt;</code> есть свое собственное, отличающееся значение <code class="highlighter-rouge">font-family</code> (по умолчанию это serif). Базовые линии тега <code class="highlighter-rouge">&lt;p&gt;</code> и <code class="highlighter-rouge">&lt;span&gt;</code>, по всей вероятности, находятся на разной высоте, и поэтому высота контейнера строки больше, чем предполагалось. Это вызвано тем, что браузеры производят вычисление, считая, что каждый контейнер строки начинается с символа нулевой ширины, который в спецификации называется «strut».</p>
+
+<p><em>Невидимый символ с видимым эффектом.</em></p>
+
+<p>Итак, у нас все та же проблема, что и в случае с одноуровневыми элементами.</p>
+
+<p><img src="/blog/assets/images/line-height/vertical-align-strut.png" alt="image" class="center" /></p>
+
+<p>С выравниванием по базовой линии все плохо, но, может, нас спасет <code class="highlighter-rouge">vertical-align: middle</code>? Как сказано в спецификации, <code class="highlighter-rouge">middle</code> «выравнивает контейнер по вертикальной средней точке (midpoint) с базовой линией родительского контейнера плюс половина x-высоты первичного элемента». Соотношение базовых линий, равно как и x-высот (x-height), может быть различным, поэтому на выравнивание по <code class="highlighter-rouge">middle</code> тоже нельзя положиться. А хуже всего тот факт, что в большинстве сценариев <code class="highlighter-rouge">middle</code> никогда не бывает по-настоящему «по центру». На это влияет слишком много факторов, которые нельзя задать через CSS (x-высота, соотношение верхнего и нижнего выносных элементов и др.).</p>
+
+<p>Помимо этого, есть еще четыре значения, которые в некоторых случаях могут оказаться полезными:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">vertical-align: top / bottom</code> — выравнивание по верхней или нижней границе контейнера строки;</li>
+  <li><code class="highlighter-rouge">vertical-align: text-top / text-bottom</code> — выравнивание по верхней или нижней границе области содержимого.</li>
+</ul>
+
+<p><img src="/blog/assets/images/line-height/vertical-align-top-bottom-text.png" alt="image" class="center" /></p>
+
+<p>Но будьте внимательны: во всех случаях выравнивается виртуальная область, то есть невидимая высота. Рассмотрим простой пример с использованием <code class="highlighter-rouge">vertical-align: top</code>. Невидимая <code class="highlighter-rouge">line-height</code> может давать странный, но ожидаемый результат.</p>
+
+<p><img src="/blog/assets/images/line-height/vertical-align-top-virtual-height.png" alt="image" class="center" /></p>
+
+<p>И наконец, <code class="highlighter-rouge">vertical-align</code> также принимает числовые значения, которые смещают контейнер выше или ниже относительно базовой линии. Этот последний вариант может пригодиться.</p>
+
+<h2 id="css-восхитителен">CSS восхитителен</h2>
+
+<p>Мы обсудили вопрос взаимодействия <code class="highlighter-rouge">line-height</code> и <code class="highlighter-rouge">vertical-align</code>, но сейчас вопрос в том, можно ли управлять метриками шрифта через CSS? Если кратко, то нет. Хотя я бы этого очень хотел. В любом случае, думаю, настало время немного развлечься. Метрики шрифта являются постоянными величинами, поэтому хоть что-то у нас должно получиться.</p>
+
+<p>Что, если, например, нам нужен текст шрифтом Catamaran с высотой прописных букв ровно 100px? Вроде выполнимо, так что давайте произведем некоторые расчеты.</p>
+
+<p>Прежде всего укажем все метрики шрифта как пользовательские свойства CSS, а затем вычислим <code class="highlighter-rouge">font-size</code>, при котором высота прописных букв будет равняться 100px.</p>
+
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span> <span class="p">{</span>
+    <span class="c">/* метрики шрифта */</span>
+    <span class="py">--font</span><span class="p">:</span> <span class="n">Catamaran</span><span class="p">;</span>
+    <span class="py">--fm-capitalHeight</span><span class="p">:</span> <span class="m">0.68</span><span class="p">;</span>
+    <span class="py">--fm-descender</span><span class="p">:</span> <span class="m">0.54</span><span class="p">;</span>
+    <span class="py">--fm-ascender</span><span class="p">:</span> <span class="m">1.1</span><span class="p">;</span>
+    <span class="py">--fm-linegap</span><span class="p">:</span> <span class="m">0</span><span class="p">;</span>
+
+    <span class="c">/* необходимый размер шрифта для высоты прописных букв */</span>
+    <span class="py">--capital-height</span><span class="p">:</span> <span class="m">100</span><span class="p">;</span>
+
+    <span class="c">/* применить font-family */</span>
+    <span class="nl">font-family</span><span class="p">:</span> <span class="n">var</span><span class="p">(</span><span class="n">--font</span><span class="p">);</span>
+
+    <span class="c">/* рассчитать размер шрифта для получения высоты прописных букв, равной необходимому размеру шрифта */</span>
+    <span class="py">--computedFontSize</span><span class="p">:</span> <span class="p">(</span><span class="n">var</span><span class="p">(</span><span class="n">--capital-height</span><span class="p">)</span> <span class="p">/</span> <span class="n">var</span><span class="p">(</span><span class="n">--fm-capitalHeight</span><span class="p">));</span>
+    <span class="nl">font-size</span><span class="p">:</span> <span class="n">calc</span><span class="p">(</span><span class="n">var</span><span class="p">(</span><span class="n">--computedFontSize</span><span class="p">)</span> <span class="err">*</span> <span class="m">1px</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p><img src="/blog/assets/images/line-height/css-metrics-capital-height.png" alt="image" class="center" /></p>
+
+<p>Довольно просто, не так ли? Но как быть, если нам нужно, чтобы текст был визуально по центру, а оставшееся пространство равномерно распределялось сверху и снизу от буквы «B»? Для этого необходимо рассчитать <code class="highlighter-rouge">vertical-align</code> на основании соотношения между верхним и нижним выносными элементами.</p>
+
+<p>Сначала вычислим <code class="highlighter-rouge">line-height: normal</code> и высоту области содержимого:</p>
+
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span> <span class="p">{</span>
+    <span class="err">…</span>
+    <span class="py">--lineheightNormal</span><span class="p">:</span> <span class="p">(</span><span class="n">var</span><span class="p">(</span><span class="n">--fm-ascender</span><span class="p">)</span> <span class="err">+</span> <span class="n">var</span><span class="p">(</span><span class="n">--fm-descender</span><span class="p">)</span> <span class="err">+</span> <span class="n">var</span><span class="p">(</span><span class="n">--fm-linegap</span><span class="p">));</span>
+    <span class="py">--contentArea</span><span class="p">:</span> <span class="p">(</span><span class="n">var</span><span class="p">(</span><span class="n">--lineheightNormal</span><span class="p">)</span> <span class="err">*</span> <span class="n">var</span><span class="p">(</span><span class="n">--computedFontSize</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Затем нам потребуются:</p>
+<ul>
+  <li>расстояние от низа прописной буквы до нижнего края;</li>
+  <li>расстояние от верха прописной буквы до верхнего края.</li>
+</ul>
+
+<p>Примерно так:</p>
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span> <span class="p">{</span>
+    <span class="err">…</span>
+    <span class="py">--distanceBottom</span><span class="p">:</span> <span class="p">(</span><span class="n">var</span><span class="p">(</span><span class="n">--fm-descender</span><span class="p">));</span>
+    <span class="py">--distanceTop</span><span class="p">:</span> <span class="p">(</span><span class="n">var</span><span class="p">(</span><span class="n">--fm-ascender</span><span class="p">)</span> <span class="n">-</span> <span class="n">var</span><span class="p">(</span><span class="n">--fm-capitalHeight</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p>Теперь можем вычислить <code class="highlighter-rouge">vertical-align</code> как разницу между этими расстояниями, умноженную на вычисленное значение <code class="highlighter-rouge">font-size</code> (Это значение нужно применить к строчному дочернему элементу).</p>
+
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span> <span class="p">{</span>
+    <span class="err">…</span>
+    <span class="py">--valign</span><span class="p">:</span> <span class="p">((</span><span class="n">var</span><span class="p">(</span><span class="n">--distanceBottom</span><span class="p">)</span> <span class="n">-</span> <span class="n">var</span><span class="p">(</span><span class="n">--distanceTop</span><span class="p">))</span> <span class="err">*</span> <span class="n">var</span><span class="p">(</span><span class="n">--computedFontSize</span><span class="p">));</span>
+<span class="p">}</span>
+<span class="nt">span</span> <span class="p">{</span>
+    <span class="nl">vertical-align</span><span class="p">:</span> <span class="n">calc</span><span class="p">(</span><span class="n">var</span><span class="p">(</span><span class="n">--valign</span><span class="p">)</span> <span class="err">*</span> <span class="m">-1px</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+<p>И наконец, задаем необходимое значение <code class="highlighter-rouge">line-height</code> и вычисляем его, сохраняя вертикальное выравнивание:</p>
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">p</span> <span class="p">{</span>
+    <span class="err">…</span>
+    <span class="c">/* необходимая высота строки */</span>
+    <span class="py">--line-height</span><span class="p">:</span> <span class="m">3</span><span class="p">;</span>
+    <span class="nl">line-height</span><span class="p">:</span> <span class="n">calc</span><span class="p">(((</span><span class="n">var</span><span class="p">(</span><span class="n">--line-height</span><span class="p">)</span> <span class="err">*</span> <span class="n">var</span><span class="p">(</span><span class="n">--capital-height</span><span class="p">))</span> <span class="n">-</span> <span class="n">var</span><span class="p">(</span><span class="n">--valign</span><span class="p">))</span> <span class="err">*</span> <span class="m">1px</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p><img src="/blog/assets/images/line-height/css-metrics-results-line-height.png" alt="image" class="center" /></p>
+
+<p>Теперь довольно просто добавить графический элемент той же высоты, что и буква «B»:</p>
+<div class="language-css highlighter-rouge"><pre class="highlight"><code><span class="nt">span</span><span class="nd">::before</span> <span class="p">{</span>
+    <span class="nl">content</span><span class="p">:</span> <span class="s2">''</span><span class="p">;</span>
+    <span class="nl">display</span><span class="p">:</span> <span class="n">inline-block</span><span class="p">;</span>
+    <span class="nl">width</span><span class="p">:</span> <span class="n">calc</span><span class="p">(</span><span class="m">1px</span> <span class="err">*</span> <span class="n">var</span><span class="p">(</span><span class="n">--capital-height</span><span class="p">));</span>
+    <span class="nl">height</span><span class="p">:</span> <span class="n">calc</span><span class="p">(</span><span class="m">1px</span> <span class="err">*</span> <span class="n">var</span><span class="p">(</span><span class="n">--capital-height</span><span class="p">));</span>
+    <span class="nl">margin-right</span><span class="p">:</span> <span class="m">10px</span><span class="p">;</span>
+    <span class="nl">background</span><span class="p">:</span> <span class="sx">url('https://cdn.pbrd.co/images/yBAKn5bbv.png')</span><span class="p">;</span>
+    <span class="nl">background-size</span><span class="p">:</span> <span class="n">cover</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p><img src="/blog/assets/images/line-height/css-metrics-results-icon.png" alt="image" class="center" /></p>
+
+<p>Напоминаю, что этот тест показан исключительно для демонстрации, и полагаться на его результаты не стоит. Причин тут много:</p>
+<ul>
+  <li>Если метрики шрифта непостоянны, то расчеты в браузере постоянными не будут. ¯(ツ)/¯</li>
+  <li>Если шрифт не загрузился, то метрики резервного шрифта, по всей вероятности, будут другими, и работать со множеством значений быстро станет невозможно.</li>
+</ul>
+
+<h2 id="Подведем-итоги">Подведем итоги</h2>
+
+<p>Рабочие примеры:</p>
+<ul>
+  <li><a href="http://jsbin.com/hogavos/edit?html,css,output">JSBin</a></li>
+  <li><a href="https://gist.github.com/Fost/9e9d575a9bd4bdc1aa610afefda62917">gist</a></li>
+</ul>
+
+<p>Что мы выяснили:</p>
+<ul>
+  <li>Строчный (inline) контекст форматирования действительно сложен для понимания.</li>
+  <li>У всех строчных элементов есть две высоты:
+    <ul>
+      <li>высота области содержимого (которая зависит от метрик шрифта);</li>
+      <li>высота виртуальной области (<code class="highlighter-rouge">line-height</code>);</li>
+      <li>ни одну из них совершенно точно нельзя визуализировать (разве что вы занимаетесь инструментальными средствами разработки и решили исправить этот недочет, — тогда было бы просто чудесно).</li>
+    </ul>
+  </li>
+  <li><code class="highlighter-rouge">line-height: normal</code> зависит от метрик шрифта.</li>
+  <li>из-за line-height: n виртуальная область может стать меньше области содержимого.</li>
+  <li>на <code class="highlighter-rouge">vertical-align</code> особо полагаться не стоит.</li>
+  <li>высота контейнера строки вычисляется при помощи свойств <code class="highlighter-rouge">line-height</code> и <code class="highlighter-rouge">vertical-align</code> его дочерних элементов.</li>
+  <li>Мы не можем просто получить или задать метрики шрифта через CSS.</li>
+</ul>
+
+<p>Но я все равно люблю CSS :)</p>
+
+<h2 id="Полезные-ссылки">Полезные ссылки</h2>
+<ul>
+  <li>метрики шрифта: <a href="https://fontforge.github.io/en-US/">FontForge</a>, <a href="http://opentype.js.org/font-inspector.html">opentype.js</a></li>
+  <li><a href="http://brunildo.org/test/aspect-lh-table2.html">вычислить <code class="highlighter-rouge">line-height: normal</code> и некоторые пропорции в браузере</a>;</li>
+  <li><a href="https://www.w3.org/Style/CSS/Test/Fonts/Ahem/">Ahem</a> — специальный шрифт, чтобы понять, как это работает</li>
+  <li>более глубокое формальное объяснение <a href="http://meyerweb.com/eric/css/inline-format.html">строчного контекста форматирования</a></li>
+  <li>будущая спецификация по данной теме для помощи с вертикальным выравниванием: <a href="https://drafts.csswg.org/css-line-grid/">Line Grid module</a></li>
+  <li>метрики шрифта, <a href="https://drafts.css-houdini.org/font-metrics-api-1/">API Уровень 1</a>, сборник интересных идей (Гудини)</li>
+</ul>
+
+<h2 id="Оригинал-статьи">Оригинал статьи,</h2>
+<p><a href="https://iamvdo.me/en/blog/css-font-metrics-line-height-and-vertical-align">Vincent De Oliveira</a></p>
+
+        </div>
+    </div>
+
+    
+    <div class="related">
+        <h4>Похожие статьи</h4>
+        <ul class="posts">
+            
+            <li>
+                <span>
+                
+                    05.04.2017 
+                 &raquo;</span>
+                <a href="/blog/iconfont">Как собрать иконочный шрифт из файла скетча</a>
+            </li>
+            
+            <li>
+                <span>
+                
+                    30.01.2017 
+                 &raquo;</span>
+                <a href="/blog/rxjs/reactive">RxJS - Часть 1, Введение в реактивное программирование</a>
+            </li>
+            
+        </ul>
+    </div>
+    
+
+    <div class="post-footer">
+        <div class="column-1">
+            
+                <a href="/blog/iconfont"><< Предыдущая статья</a>
+            
+        </div>
+        <div class="column-2"><a href="/blog/ ">Домашняя страница</a></div>
+        <div class="column-3">
+            
+                <span>Следующая статья >></span>
+            
+        </div>
+    </div>
+</div>
+
+        <footer class="main-footer">
+    <div class="wc-container">  
+        <div class="column one">
+            <h6>Ссылки</h6>
+            <ul class="menu">
+                <li><a href="/blog/about">О нас</a></li>
+                <li><a href="/blog/blog">Архив</a></li>
+                <li><a href="https://ptsecurity.com">PTSecurity</a></li>
+            </ul>                    
+        </div>
+        <div class="column two">
+            <h6>Социальные сети</h6>
+
+<ul class="social-media">
+
+    
+    <li>
+        <a title="ptsecurity on Twitter" 
+            href="https://twitter.com/ptsecurity" 
+            class="twitter wc-img-replace" target="_blank">Twitter</a>
+    </li>   
+    
+
+    
+    <li>
+        <a title="positive-js on Github" 
+            href="https://github.com/positive-js" 
+            class="github wc-img-replace" target="_blank">Github</a>
+    </li>
+     
+
+    <li>
+        <a title="positivejs on Telegram" 
+            href="https://t.me/positivejs" 
+            class="telegram wc-img-replace" target="_blank">Telegram</a>
+    </li>
+</ul>
+
+        </div>
+    </div>
+    <p class="wc-container disclaimer">
+        Powered by <a href="http://jekyllrb.com" target="_blank">Jekyll</a>
+    </p>
+</footer>
+
+        <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-92531585-1', 'auto');
+    ga('send', 'pageview');
+</script>
+    </body>
+</html>
